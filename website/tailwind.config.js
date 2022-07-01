@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const plugin = require('tailwindcss/plugin')
+
 module.exports = {
   content: ["./pages/**/*.{tsx, ts}", "./components/**/*.{tsx, ts}"],
   theme: {
@@ -8,5 +10,7 @@ module.exports = {
 			}
 		},
   },
-  plugins: [],
+  plugins: [plugin(({addVariant}) => {
+		addVariant('not-last', '&:not(:last-child)')
+	})],
 }
