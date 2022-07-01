@@ -4,7 +4,7 @@ import tw from "twin.macro";
 const $PageWrapper = tw.div`
 	min-h-screen
 	bg-bg_primary
-	pt-16
+	pt-28
 `;
 
 const $PageLayout = tw.div`
