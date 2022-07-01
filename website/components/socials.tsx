@@ -34,8 +34,8 @@ const SocialMediaIcon = ({ name, icon, url }: SocialMediaButtonProps) => {
 		hover:cursor-pointer
 		not-last:mr-2
 		mb-2
-		w-6
-		h-6
+		w-9
+		h-9
 	`;
   return (
     <$StyledIcon
