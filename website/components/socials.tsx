@@ -31,11 +31,11 @@ const socials: SocialMediaButtonProps[] = [
 
 const SocialMediaIcon = ({ name, icon, url }: SocialMediaButtonProps) => {
   let $StyledIcon = tw(icon)`
-		w-12
-		h-12
 		hover:cursor-pointer
 		not-last:mr-2
 		mb-2
+		w-6
+		h-6
 	`;
   return (
     <$StyledIcon
@@ -49,6 +49,7 @@ const SocialMediaIcon = ({ name, icon, url }: SocialMediaButtonProps) => {
 const $Socials = tw.div`
 	flex
 	flex-wrap
+	justify-center
 	w-80
 `;
 export const Socials = () => {
