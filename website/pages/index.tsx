@@ -1,3 +1,4 @@
+import { Socials } from "components/socials";
 import type { NextPage } from "next";
 import tw from "twin.macro";
 
@@ -9,10 +10,7 @@ const Container = tw.div`
 const Home: NextPage = () => {
   return (
     <Container>
-      <div>aaaa</div>
-      <div>aaaa</div>
-      <div>aaaa</div>
-      <div>aaaa</div>
+      <Socials />
     </Container>
   );
 };
