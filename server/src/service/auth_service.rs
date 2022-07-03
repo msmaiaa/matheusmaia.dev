@@ -1,19 +1,14 @@
 use argon2::{self, Config};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header};
 use std::env;
 
-use crate::prisma::{self};
+use crate::{
+    common_types::TokenData,
+    prisma::{self},
+};
 
 pub struct AuthService;
-
-#[derive(Serialize, Deserialize)]
-struct TokenData {
-    username: String,
-    iat: i64,
-    exp: i64,
-}
 
 impl AuthService {
     pub async fn login(
@@ -72,6 +67,16 @@ impl AuthService {
         };
         let header = Header::new(Algorithm::HS256);
         encode(&header, &claims, &key).expect("Failed to create access token")
+    }
+
+    pub fn decode_token(token: &str) -> Option<TokenData> {
+        let key =
+            DecodingKey::from_secret(env::var("JWT_KEY").expect("JWT_KEY not set").as_bytes());
+        let res = decode::<TokenData>(&token, &key, &jsonwebtoken::Validation::default());
+        match res {
+            Ok(data) => Some(data.claims),
+            Err(_) => None,
+        }
     }
     pub fn encrypt(password: &str) -> String {
         //	the salt must have atleast 16 characters
