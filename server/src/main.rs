@@ -2,7 +2,7 @@ extern crate dotenv;
 use std::sync::Arc;
 
 use dotenv::dotenv;
-use poem::{listener::TcpListener, EndpointExt, Route};
+use poem::{listener::TcpListener, middleware::Cors, EndpointExt, Route};
 use poem_openapi::OpenApiService;
 
 mod config;
@@ -51,6 +51,7 @@ async fn main() -> Result<(), std::io::Error> {
     let app = Route::new()
         .nest("/api", api_service)
         .nest("/", ui)
+        .with(Cors::new())
         .data(ctx);
 
     poem::Server::new(TcpListener::bind(server.get_server_url()))
