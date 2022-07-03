@@ -1,0 +1,16 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "cargo prisma"
+  output   = "../src/prisma.rs"
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  username String
+  password String
+  admin    Boolean
+}
