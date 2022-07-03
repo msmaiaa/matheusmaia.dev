@@ -5,6 +5,7 @@ use dotenv::dotenv;
 use poem::{listener::TcpListener, middleware::Cors, EndpointExt, Route};
 use poem_openapi::OpenApiService;
 
+mod common_types;
 mod config;
 mod controller;
 mod db;
