@@ -2618,6 +2618,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be91bcc43e73799dc46a6c194a55e7aae1d86cc867c860fd4a436019af21bd8c"
 
 [[package]]
+name = "prisma-cli"
+version = "0.1.0"
+dependencies = [
+ "prisma-client-rust-cli",
+]
+
+[[package]]
 name = "prisma-client-rust"
 version = "0.5.2"
 source = "git+https://github.com/Brendonovich/prisma-client-rust?tag=0.5.2#88ba860aedace6ebf0707fa989138fea87cd0d5e"
@@ -3395,7 +3402,6 @@ dependencies = [
  "poem",
  "poem-openapi",
  "prisma-client-rust",
- "prisma-client-rust-cli",
  "rust-argon2",
  "serde",
  "tokio",

@@ -32,6 +32,7 @@ impl AuthService {
     }
     pub fn encrypt(password: &str) -> String {
         //	the salt must have atleast 16 characters
+        println!("encrypting");
         let salt = env::var("SALT").unwrap_or("123451234512345123451235".to_string());
         let config = Config::default();
         argon2::hash_encoded(password.as_bytes(), salt.as_bytes(), &config)
