@@ -38,14 +38,14 @@ enum GetCurrentUserResponse {
 #[derive(SecurityScheme)]
 #[oai(
     type = "bearer",
-    key_name = "Authorization",
+    key_name = "authorization",
     in = "header",
     checker = "check_jwt"
 )]
 struct JWTAuthorization(TokenData);
 
 async fn check_jwt(req: &Request, _: Bearer) -> Option<TokenData> {
-    let bearer = req.header("Authorization").unwrap().replace("Bearer ", "");
+    let bearer = req.header("authorization").unwrap().replace("Bearer ", "");
     AuthService::decode_token(&bearer)
 }
 

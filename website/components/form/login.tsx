@@ -5,6 +5,12 @@ import tw from "twin.macro";
 import { z } from "zod";
 import { $Button } from "components/ui/button";
 import { $Input } from "components/ui/input";
+import { LoginInput } from "types";
+import { useLoginMutation } from "api/auth";
+import { useStore } from "store";
+import { useAuth } from "hooks/auth";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 const $FormInput = tw($Input)`
 	w-2/3
@@ -39,19 +45,36 @@ const loginSchema = z.object({
   username: z.string(),
   password: z.string(),
 });
-type LoginInput = z.infer<typeof loginSchema>;
 
 export const LoginForm = () => {
-  const {
-    handleSubmit,
-    register,
-    formState: { isValid },
-  } = useForm<LoginInput>({
+  const { loggedIn, isLoading } = useAuth();
+  const router = useRouter();
+  const { handleSubmit, register } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   });
+  const [login] = useLoginMutation();
+  const { setUser, setLoggedIn } = useStore((state) => ({
+    setUser: state.setUser,
+    setLoggedIn: state.setLoggedIn,
+  }));
+
+  useEffect(() => {
+    if (!isLoading && loggedIn) {
+      if (loggedIn) {
+        router.push("/");
+      }
+    }
+  }, [loggedIn, isLoading]);
 
   const onSubmit = (data: LoginInput) => {
-    console.log(data);
+    login(data)
+      .unwrap()
+      .then((data) => {
+        setUser(data);
+        setLoggedIn(true);
+        localStorage.setItem("token", data.token);
+      })
+      .catch((error) => console.error(error));
   };
 
   return (

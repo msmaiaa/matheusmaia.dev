@@ -11,7 +11,7 @@ const baseQuery = fetchBaseQuery({
     console.log(process.env.NEXT_PUBLIC_API_URL);
     let token = localStorage.getItem("token");
     if (token) {
-      headers.set("Authorizaton", `Bearer ${token}`);
+      headers.set("Authorization", `Bearer ${token}`);
     }
     return headers;
   },

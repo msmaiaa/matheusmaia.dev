@@ -4,6 +4,31 @@ import GlobalStyles from "styles/globalStyles";
 import "../styles/globals.css";
 import { ApiProvider } from "@reduxjs/toolkit/query/react";
 import { baseApi } from "api";
+import { useGetCurrentUserMutation } from "api/user";
+import React, { ReactNode, useEffect } from "react";
+import { useStore } from "store";
+
+const AuthHandler: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [getUser] = useGetCurrentUserMutation();
+  const { setUser, setLoggedIn, setIsLoading } = useStore((state) => ({
+    setUser: state.setUser,
+    setLoggedIn: state.setLoggedIn,
+    setIsLoading: state.setIsLoading,
+  }));
+
+  useEffect(() => {
+    getUser()
+      .unwrap()
+      .then((data) => {
+        setUser(data);
+        setLoggedIn(true);
+      })
+      .catch(() => localStorage.removeItem("token"));
+
+    setIsLoading(false);
+  }, []);
+  return <>{children}</>;
+};
 
 function App({ Component, pageProps }: AppProps) {
   return (
@@ -11,7 +36,9 @@ function App({ Component, pageProps }: AppProps) {
       <GlobalStyles />
       <Layout>
         <ApiProvider api={baseApi}>
-          <Component {...pageProps} />
+          <AuthHandler>
+            <Component {...pageProps} />
+          </AuthHandler>
         </ApiProvider>
       </Layout>
     </>
