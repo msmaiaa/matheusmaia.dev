@@ -23,39 +23,39 @@ impl AuthService {
     ) -> Option<String> {
         let user_repo = crate::repository::user_repository::UserRepository::new(prisma.clone());
         let found_user = user_repo.find_by_username(username).await;
+        let found_user = match found_user {
+            Ok(user) => user,
+            Err(_) => return None,
+        };
         match found_user {
-            Ok(user) => match user {
-                Some(user) => match AuthService::compare_hash(&password.clone(), &user.password) {
-                    true => return Some(AuthService::create_access_token(username.to_string())),
-                    false => return None,
-                },
-                None => {
-                    let admin_username = std::env::var("ADMIN_USERNAME")
-                        .unwrap_or("matheus".to_string())
-                        .to_string();
-                    if admin_username == username {
-                        println!("teste");
-                        let hashed_pass = AuthService::encrypt(&password);
-                        let created = user_repo.create(username, &hashed_pass, true).await;
-                        match created {
-                            Ok(_) => {
-                                return Some(AuthService::create_access_token(
-                                    username.to_string(),
-                                ));
-                            }
-                            Err(err) => {
-                                println!("Error on user creation: {}", err);
-                                return None;
-                            }
-                        }
-                    }
+            Some(user) => match AuthService::compare_hash(&password.clone(), &user.password) {
+                true => return Some(AuthService::create_access_token(username.to_string())),
+                false => return None,
+            },
+            None => {
+                if !AuthService::is_admin_username(username) {
                     return None;
                 }
-            },
-            Err(_) => {
-                return None;
+                let hashed_pass = AuthService::encrypt(&password);
+                let created = user_repo.create(username, &hashed_pass, true).await;
+                match created {
+                    Ok(_) => {
+                        return Some(AuthService::create_access_token(username.to_string()));
+                    }
+                    Err(err) => {
+                        println!("Error on user creation: {}", err);
+                        return None;
+                    }
+                }
             }
-        };
+        }
+    }
+
+    fn is_admin_username(username: &str) -> bool {
+        let admin_username = std::env::var("ADMIN_USERNAME")
+            .unwrap_or("matheus".to_string())
+            .to_string();
+        username == admin_username
     }
     pub fn create_access_token(username: String) -> String {
         let iat = Utc::now();
