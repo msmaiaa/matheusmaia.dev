@@ -1,11 +1,10 @@
 use argon2::{self, Config};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use poem::web::Json;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-use crate::prisma::{self, user};
+use crate::prisma::{self};
 
 pub struct AuthService;
 
@@ -22,11 +21,8 @@ impl AuthService {
         username: &str,
         password: &str,
     ) -> Option<String> {
-        let found_user = prisma
-            .user()
-            .find_first(vec![user::username::equals(username.to_string())])
-            .exec()
-            .await;
+        let user_repo = crate::repository::user_repository::UserRepository::new(prisma.clone());
+        let found_user = user_repo.find_by_username(username).await;
         match found_user {
             Ok(user) => match user {
                 Some(user) => match AuthService::compare_hash(&password.clone(), &user.password) {
@@ -40,16 +36,7 @@ impl AuthService {
                     if admin_username == username {
                         println!("teste");
                         let hashed_pass = AuthService::encrypt(&password);
-                        let created = prisma
-                            .user()
-                            .create(
-                                user::username::set(username.to_string()),
-                                user::password::set(hashed_pass),
-                                user::admin::set(true),
-                                vec![],
-                            )
-                            .exec()
-                            .await;
+                        let created = user_repo.create(username, &hashed_pass, true).await;
                         match created {
                             Ok(_) => {
                                 return Some(AuthService::create_access_token(
@@ -69,7 +56,6 @@ impl AuthService {
                 return None;
             }
         };
-        None
     }
     pub fn create_access_token(username: String) -> String {
         let iat = Utc::now();

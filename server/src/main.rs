@@ -9,6 +9,7 @@ mod config;
 mod controller;
 mod db;
 mod prisma;
+mod repository;
 mod service;
 
 use controller::*;
