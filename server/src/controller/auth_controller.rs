@@ -32,7 +32,7 @@ struct GetCurrentUserResponsePayload {
 #[derive(ApiResponse)]
 enum GetCurrentUserResponse {
     #[oai(status = 200)]
-    Ok(Json<GetCurrentUserResponsePayload>),
+    Ok,
 }
 
 #[derive(SecurityScheme)]
@@ -69,9 +69,10 @@ impl AuthController {
     }
 
     #[oai(path = "/me", method = "get")]
-    async fn me(&self, data: Data<&Context>, auth: JWTAuthorization) -> GetCurrentUserResponse {
-        GetCurrentUserResponse::Ok(Json(GetCurrentUserResponsePayload {
-            username: auth.0.username,
-        }))
+    async fn me(&self, auth: JWTAuthorization) -> GetCurrentUserResponse {
+        // GetCurrentUserResponse::Ok(Json(GetCurrentUserResponsePayload {
+        //     username: auth.0.username,
+        // }))
+        GetCurrentUserResponse::Ok
     }
 }

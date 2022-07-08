@@ -43,19 +43,18 @@ impl Server {
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     dotenv().ok();
-    println!("{}", std::env::var("MYSQL_USER").unwrap());
     let client = db::get_client().await.expect("Failed to get prisma client");
     let ctx = config::context::Context::new(Arc::new(client));
     let server = Server::new();
     let api_service =
         OpenApiService::new(AuthController, "Api", "1.0").server(server.get_api_url());
     let ui = api_service.swagger_ui();
-    tracing_subscriber::fmt::init();
+    //tracing_subscriber::fmt::init();
     let app = Route::new()
         .nest("/api", api_service)
         .nest("/", ui)
         .with(Cors::new())
-        .with(Tracing)
+        //.with(Tracing)
         .data(ctx);
 
     poem::Server::new(TcpListener::bind(server.get_server_url()))

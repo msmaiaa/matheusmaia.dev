@@ -16,26 +16,26 @@ impl AuthService {
         username: &str,
         password: &str,
     ) -> Option<String> {
-        let user_repo = crate::repository::user_repository::UserRepository::new(prisma.clone());
-        let found_user = user_repo.find_by_username(username).await;
+        let user_repo = crate::repository::user_repository::UserRepository::new(prisma);
+        let found_user = user_repo.find_by_username(&username).await;
         let found_user = match found_user {
             Ok(user) => user,
             Err(_) => return None,
         };
         match found_user {
-            Some(user) => match AuthService::compare_hash(&password.clone(), &user.password) {
-                true => return Some(AuthService::create_access_token(username.to_string())),
+            Some(user) => match AuthService::compare_hash(&password, &user.password) {
+                true => return Some(AuthService::create_access_token(username)),
                 false => return None,
             },
             None => {
-                if !AuthService::is_admin_username(username) {
+                if !AuthService::is_admin_username(&username) {
                     return None;
                 }
                 let hashed_pass = AuthService::encrypt(&password);
-                let created = user_repo.create(username, &hashed_pass, true).await;
+                let created = user_repo.create(&username, &hashed_pass, true).await;
                 match created {
                     Ok(_) => {
-                        return Some(AuthService::create_access_token(username.to_string()));
+                        return Some(AuthService::create_access_token(username));
                     }
                     Err(err) => {
                         println!("Error on user creation: {}", err);
@@ -52,7 +52,7 @@ impl AuthService {
             .to_string();
         username == admin_username
     }
-    pub fn create_access_token(username: String) -> String {
+    pub fn create_access_token(username: &str) -> String {
         let iat = Utc::now();
         let exp = iat + Duration::seconds(3600);
         let iat = iat.timestamp_millis();
@@ -86,7 +86,7 @@ impl AuthService {
             .expect("Failed to hash password")
     }
     pub fn compare_hash(password: &str, encrypted: &str) -> bool {
-        let hashed_input = AuthService::encrypt(password);
+        let hashed_input = AuthService::encrypt(&password);
         if hashed_input == encrypted.to_string() {
             return true;
         }
