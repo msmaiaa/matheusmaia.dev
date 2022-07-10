@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-use poem::http::Error;
->>>>>>> 2e519a5 (refactor: better error handling)
 use poem_openapi::{payload::Json, ApiResponse, Object};
 
 #[derive(serde::Serialize, serde::Deserialize)]
