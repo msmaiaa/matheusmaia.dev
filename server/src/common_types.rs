@@ -42,3 +42,16 @@ impl From<AppError> for ResponseError {
         }
     }
 }
+
+#[derive(Object)]
+pub struct Tag {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct TagPaginationParams {
+    pub skip: Option<i64>,
+    pub take: Option<i64>,
+    pub name: Option<String>,
+}
