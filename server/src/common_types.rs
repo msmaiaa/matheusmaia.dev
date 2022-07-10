@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+use poem::http::Error;
+>>>>>>> 2e519a5 (refactor: better error handling)
 use poem_openapi::{payload::Json, ApiResponse, Object};
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -12,6 +16,11 @@ pub struct ErrorMessage {
     pub message: String,
 }
 
+impl ErrorMessage {
+    pub fn as_json(message: String) -> Json<ErrorMessage> {
+        Json(ErrorMessage { message: message })
+    }
+}
 #[derive(ApiResponse)]
 pub enum ResponseError {
     #[oai(status = 400)]
@@ -29,11 +38,11 @@ impl From<AppError> for ResponseError {
     fn from(e: AppError) -> Self {
         match e {
             AppError::BadRequest(message) => {
-                ResponseError::BadRequest(Json(ErrorMessage { message }))
+                ResponseError::BadRequest(ErrorMessage::as_json(message))
             }
-            _ => ResponseError::InternalServerError(Json(ErrorMessage {
-                message: "Unknown error".to_string(),
-            })),
+            _ => ResponseError::InternalServerError(ErrorMessage::as_json(
+                "Unknown error".to_string(),
+            )),
         }
     }
 }
