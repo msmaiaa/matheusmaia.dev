@@ -2,7 +2,7 @@ extern crate dotenv;
 use std::sync::Arc;
 
 use dotenv::dotenv;
-use poem::{listener::TcpListener, middleware::Cors, middleware::Tracing, EndpointExt, Route};
+use poem::{listener::TcpListener, middleware::Cors, EndpointExt, Route};
 use poem_openapi::OpenApiService;
 
 mod common_types;
@@ -47,8 +47,8 @@ async fn main() -> Result<(), std::io::Error> {
     let client = db::get_client().await.expect("Failed to get prisma client");
     let ctx = config::context::Context::new(Arc::new(client));
     let server = Server::new();
-    let api_service =
-        OpenApiService::new(AuthController, "Api", "1.0").server(server.get_api_url());
+    let api_service = OpenApiService::new((AuthController, TagController), "Api", "1.0")
+        .server(server.get_api_url());
     let ui = api_service.swagger_ui();
     //tracing_subscriber::fmt::init();
     let app = Route::new()

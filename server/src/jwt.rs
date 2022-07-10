@@ -10,9 +10,8 @@ use crate::{common_types::TokenData, service::AuthService};
     in = "header",
     checker = "check_jwt"
 )]
-pub struct JWTAuthorization(TokenData);
+pub struct JWTAuthorization(pub TokenData);
 
-async fn check_jwt(req: &Request, _: Bearer) -> Option<TokenData> {
-    let bearer = req.header("authorization").unwrap().replace("Bearer ", "");
-    AuthService::decode_token(&bearer)
+async fn check_jwt(_: &Request, bearer: Bearer) -> Option<TokenData> {
+    AuthService::decode_token(&bearer.token)
 }
