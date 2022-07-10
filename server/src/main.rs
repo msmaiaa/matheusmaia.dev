@@ -9,6 +9,7 @@ mod common_types;
 mod config;
 mod controller;
 mod db;
+mod jwt;
 mod prisma;
 mod repository;
 mod service;

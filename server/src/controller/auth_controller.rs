@@ -1,6 +1,6 @@
-use crate::{common_types::TokenData, config::context::Context, service::AuthService};
-use poem::{web::Data, Request};
-use poem_openapi::{auth::Bearer, payload::Json, ApiResponse, Object, OpenApi, SecurityScheme};
+use crate::{config::context::Context, jwt::JWTAuthorization, service::AuthService};
+use poem::web::Data;
+use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
 
 pub struct AuthController;
 
@@ -35,20 +35,6 @@ enum GetCurrentUserResponse {
     Ok,
 }
 
-#[derive(SecurityScheme)]
-#[oai(
-    type = "bearer",
-    key_name = "authorization",
-    in = "header",
-    checker = "check_jwt"
-)]
-struct JWTAuthorization(TokenData);
-
-async fn check_jwt(req: &Request, _: Bearer) -> Option<TokenData> {
-    let bearer = req.header("authorization").unwrap().replace("Bearer ", "");
-    AuthService::decode_token(&bearer)
-}
-
 #[OpenApi(prefix_path = "/auth")]
 impl AuthController {
     #[oai(path = "/login", method = "post")]
@@ -69,7 +55,7 @@ impl AuthController {
     }
 
     #[oai(path = "/me", method = "get")]
-    async fn me(&self, auth: JWTAuthorization) -> GetCurrentUserResponse {
+    async fn me(&self, _data: JWTAuthorization) -> GetCurrentUserResponse {
         // GetCurrentUserResponse::Ok(Json(GetCurrentUserResponsePayload {
         //     username: auth.0.username,
         // }))
