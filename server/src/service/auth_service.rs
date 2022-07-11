@@ -16,12 +16,13 @@ impl AuthService {
         username: &str,
         password: &str,
     ) -> Option<String> {
+        // TODO: automatically create the admin user on container startup and remove this logic
         let user_repo = crate::repository::user_repository::UserRepository::new(prisma);
-        let found_user = user_repo.find_by_username(&username).await;
-        let found_user = match found_user {
-            Ok(user) => user,
-            Err(_) => return None,
-        };
+        let found_user: Option<prisma::user::Data> = user_repo
+            .find_by_username(&username)
+            .await
+            .map(|user| user)
+            .unwrap_or_else(|_| return None);
         match found_user {
             Some(user) => match AuthService::compare_hash(&password, &user.password) {
                 true => return Some(AuthService::create_access_token(username)),
@@ -32,16 +33,11 @@ impl AuthService {
                     return None;
                 }
                 let hashed_pass = AuthService::encrypt(&password);
-                let created = user_repo.create(&username, &hashed_pass, true).await;
-                match created {
-                    Ok(_) => {
-                        return Some(AuthService::create_access_token(username));
-                    }
-                    Err(err) => {
-                        println!("Error on user creation: {}", err);
-                        return None;
-                    }
-                }
+                user_repo
+                    .create(&username, &hashed_pass, true)
+                    .await
+                    .map(|_| Some(AuthService::create_access_token(username)))
+                    .unwrap_or(None)
             }
         }
     }
@@ -52,6 +48,7 @@ impl AuthService {
             .to_string();
         username == admin_username
     }
+
     pub fn create_access_token(username: &str) -> String {
         let iat = Utc::now();
         let exp = iat + Duration::seconds(3600);
@@ -78,6 +75,7 @@ impl AuthService {
             Err(_) => None,
         }
     }
+
     pub fn encrypt(password: &str) -> String {
         //	the salt must have atleast 16 characters
         let salt = env::var("SALT").unwrap_or("123451234512345123451235".to_string());
@@ -85,11 +83,8 @@ impl AuthService {
         argon2::hash_encoded(password.as_bytes(), salt.as_bytes(), &config)
             .expect("Failed to hash password")
     }
+
     pub fn compare_hash(password: &str, encrypted: &str) -> bool {
-        let hashed_input = AuthService::encrypt(&password);
-        if hashed_input == encrypted.to_string() {
-            return true;
-        }
-        false
+        AuthService::encrypt(&password) == encrypted.to_string()
     }
 }

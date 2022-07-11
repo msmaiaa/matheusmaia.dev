@@ -18,6 +18,8 @@ impl TagService {
             AppError::Unknown
         })
     }
+
+    //	TODO: add query fields to swagger
     pub async fn find_many(
         prisma: std::sync::Arc<PrismaClient>,
         params: Pageable,

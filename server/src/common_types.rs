@@ -23,6 +23,8 @@ pub enum ResponseError {
     BadRequest(Json<ErrorMessage>),
     #[oai(status = 500)]
     InternalServerError(Json<ErrorMessage>),
+    #[oai(status = 401)]
+    Unauthorized,
 }
 
 pub enum AppError {

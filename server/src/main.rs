@@ -41,6 +41,7 @@ impl Server {
     }
 }
 
+// TODO: keep the basic stuff here and move the rest to the lib
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     dotenv().ok();
