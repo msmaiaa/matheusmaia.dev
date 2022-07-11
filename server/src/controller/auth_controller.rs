@@ -56,9 +56,6 @@ impl AuthController {
 
     #[oai(path = "/me", method = "get")]
     async fn me(&self, _data: JWTAuthorization) -> GetCurrentUserResponse {
-        // GetCurrentUserResponse::Ok(Json(GetCurrentUserResponsePayload {
-        //     username: auth.0.username,
-        // }))
         GetCurrentUserResponse::Ok
     }
 }

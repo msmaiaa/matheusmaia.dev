@@ -3,7 +3,7 @@ use poem::{web::Data, Request};
 use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
 
 use crate::{
-    common_types::{ResponseError, Tag, TagPaginationParams},
+    common_types::{Pageable, ResponseError, Tag, TagFilters},
     config::context::Context,
 };
 
@@ -33,10 +33,10 @@ impl TagController {
         _auth: crate::jwt::JWTAuthorization,
         body: Json<CreateTagPayload>,
     ) -> Result<CreateTagResponse, ResponseError> {
-        match crate::service::TagService::create_tag(data.prisma.to_owned(), &body.0.name).await {
-            Ok(_) => Ok(CreateTagResponse::Ok),
-            Err(e) => Err(e.into()),
-        }
+        crate::service::TagService::create_tag(data.prisma.to_owned(), &body.0.name)
+            .await
+            .map(|_| CreateTagResponse::Ok)
+            .map_err(|e| e.into())
     }
     #[oai(path = "/", method = "get")]
     async fn find_many(
@@ -44,16 +44,11 @@ impl TagController {
         req: &Request,
         data: Data<&Context>,
     ) -> Result<FindTagsResponse, ResponseError> {
-        let params = req
-            .params::<TagPaginationParams>()
-            .unwrap_or(TagPaginationParams {
-                skip: None,
-                take: None,
-                name: None,
-            });
-        match crate::service::TagService::find_many(data.prisma.to_owned(), params).await {
-            Ok(tags) => Ok(FindTagsResponse::Ok(Json(tags))),
-            Err(e) => Err(e.into()),
-        }
+        let filters = req.params::<Pageable>().unwrap_or_default();
+        let other_params = req.params::<TagFilters>().unwrap_or_default();
+        crate::service::TagService::find_many(data.prisma.to_owned(), filters, other_params)
+            .await
+            .map(|tags| FindTagsResponse::Ok(Json(tags)))
+            .map_err(|e| e.into())
     }
 }

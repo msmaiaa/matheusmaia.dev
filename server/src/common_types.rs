@@ -49,9 +49,22 @@ pub struct Tag {
     pub name: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
-pub struct TagPaginationParams {
+impl From<crate::prisma::tag::Data> for Tag {
+    fn from(data: crate::prisma::tag::Data) -> Self {
+        Tag {
+            id: data.id,
+            name: data.name,
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct Pageable {
     pub skip: Option<i64>,
     pub take: Option<i64>,
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct TagFilters {
     pub name: Option<String>,
 }

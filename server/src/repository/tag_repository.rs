@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    common_types::TagPaginationParams,
+    common_types::{Pageable, TagFilters},
     prisma::{self, tag, PrismaClient},
 };
 
@@ -24,13 +24,14 @@ impl TagRepository {
 
     pub async fn find_many(
         &self,
-        pagination: TagPaginationParams,
+        pagination: Pageable,
+        query: TagFilters,
     ) -> Result<Vec<prisma::tag::Data>, prisma_client_rust::Error> {
         let mut query = self
             .client
             .tag()
             .find_many(vec![crate::prisma::tag::name::contains(
-                pagination.name.unwrap_or("".to_string()),
+                query.name.unwrap_or("".to_string()),
             )]);
         if let Some(skip) = pagination.skip {
             query = query.skip(skip);
