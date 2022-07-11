@@ -1,5 +1,8 @@
 pub struct TagController;
-use poem::{web::Data, Request};
+use poem::{
+    web::{Data, Path},
+    Request,
+};
 use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
 
 use crate::{
@@ -22,6 +25,12 @@ enum CreateTagResponse {
 enum FindTagsResponse {
     #[oai(status = 200)]
     Ok(Json<Vec<Tag>>),
+}
+
+#[derive(ApiResponse)]
+enum DeleteTagResponse {
+    #[oai(status = 204)]
+    Ok,
 }
 
 #[OpenApi(prefix_path = "/tag")]
@@ -49,6 +58,20 @@ impl TagController {
         crate::service::TagService::find_many(data.prisma.to_owned(), filters, other_params)
             .await
             .map(|tags| FindTagsResponse::Ok(Json(tags)))
+            .map_err(|e| e.into())
+    }
+
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete(
+        &self,
+        req: &Request,
+        data: Data<&Context>,
+    ) -> Result<DeleteTagResponse, ResponseError> {
+        let id = req.path_params::<i32>().expect("Error on path params");
+
+        crate::service::TagService::delete(data.prisma.to_owned(), &id)
+            .await
+            .map(|_| DeleteTagResponse::Ok)
             .map_err(|e| e.into())
     }
 }

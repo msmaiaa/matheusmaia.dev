@@ -25,11 +25,14 @@ pub enum ResponseError {
     InternalServerError(Json<ErrorMessage>),
     #[oai(status = 401)]
     Unauthorized,
+    #[oai(status = 404)]
+    NotFound(Json<ErrorMessage>),
 }
 
 pub enum AppError {
     BadRequest(String),
     Unknown,
+    NotFound(String),
 }
 
 impl From<AppError> for ResponseError {
@@ -38,6 +41,7 @@ impl From<AppError> for ResponseError {
             AppError::BadRequest(message) => {
                 ResponseError::BadRequest(ErrorMessage::as_json(message))
             }
+            AppError::NotFound(message) => ResponseError::NotFound(ErrorMessage::as_json(message)),
             _ => ResponseError::InternalServerError(ErrorMessage::as_json(
                 "Unknown error".to_string(),
             )),

@@ -14,10 +14,19 @@ impl TagRepository {
         TagRepository { client }
     }
 
-    pub async fn create(&self, name: &str) -> Result<prisma::tag::Data, prisma_client_rust::Error> {
+    pub async fn create(&self, name: &str) -> Result<tag::Data, prisma_client_rust::Error> {
         self.client
             .tag()
             .create(tag::name::set(name.to_string()), vec![])
+            .exec()
+            .await
+    }
+
+    pub async fn delete(&self, id: &i32) -> Result<Option<tag::Data>, prisma_client_rust::Error> {
+        self.client
+            .tag()
+            .find_unique(tag::id::equals(*id))
+            .delete()
             .exec()
             .await
     }

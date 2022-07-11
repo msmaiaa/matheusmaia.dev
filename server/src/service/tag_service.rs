@@ -19,6 +19,14 @@ impl TagService {
         })
     }
 
+    pub async fn delete(prisma: std::sync::Arc<PrismaClient>, id: &i32) -> Result<(), AppError> {
+        let repo = crate::repository::tag_repository::TagRepository::new(prisma);
+        repo.delete(id).await.map_or(Ok(()), |res| match res {
+            Some(_) => Ok(()),
+            None => Err(AppError::NotFound("Tag not found".to_string())),
+        })
+    }
+
     //	TODO: add query fields to swagger
     pub async fn find_many(
         prisma: std::sync::Arc<PrismaClient>,
@@ -27,7 +35,6 @@ impl TagService {
     ) -> Result<Vec<Tag>, AppError> {
         let repo = crate::repository::tag_repository::TagRepository::new(prisma);
 
-        // can this type convertion be avoided?
         repo.find_many(params, query)
             .await
             .map(|val| val.into_iter().map(Tag::from).collect())
