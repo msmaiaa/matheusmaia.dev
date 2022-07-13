@@ -1,4 +1,4 @@
-use crate::common_types::{AppError, Post, Tag};
+use crate::common_types::{AppError, Post};
 use crate::{common_types::CreatePostPayload, prisma::PrismaClient};
 use prisma_client_rust::prisma_errors::{query_engine::*, UserFacingError};
 
@@ -24,34 +24,10 @@ impl PostService {
         data: &CreatePostPayload,
         user_id: &i32,
     ) -> Result<Post, AppError> {
-        //	TODO: handle unique title
-        //	TODO: handle empty array of tags
-        //	TODO: handle empty content
-        //	TODO: handle empty title
-        // 	TODO: handle non existing tag error
         let repo = post_repository::PostRepository::new(prisma);
         let res = repo.create_post(data, user_id).await;
         if let Ok(data) = res {
-            //	TODO: impl From<> for Post
-            return Ok(Post {
-                author_id: data.author_id,
-                author: None,
-                created_at: data.created_at,
-                id: data.id,
-                published: data.published,
-                tags: data.tags.map_or(None, |tags| {
-                    Some(
-                        tags.into_iter()
-                            .map(|tag| Tag {
-                                id: tag.id,
-                                name: tag.name,
-                            })
-                            .collect(),
-                    )
-                }),
-                title: data.title,
-                updated_at: data.updated_at,
-            });
+            return Ok(Post::from(data));
         }
         if let Err(err) = res {
             match err {

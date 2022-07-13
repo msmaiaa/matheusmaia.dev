@@ -82,11 +82,22 @@ pub struct Post {
     pub id: i32,
     pub title: String,
     pub published: bool,
-    pub author: Option<User>,
     pub author_id: i32,
-    pub tags: Option<Vec<Tag>>,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+}
+
+impl From<crate::prisma::post::Data> for Post {
+    fn from(data: crate::prisma::post::Data) -> Self {
+        Post {
+            id: data.id,
+            title: data.title,
+            published: data.published,
+            author_id: data.author_id,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
