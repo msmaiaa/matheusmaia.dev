@@ -6,7 +6,13 @@ module.exports = {
   theme: {
     extend: {
 			colors: {
-				bg_primary: "#0d1117"
+				bg_primary: "#0d1117",
+				border_primary: "#30363d",
+				btn_bg: "#21262d",
+				btn_text: "#c9d1d9",
+				btn_border: "rgb(240 246 252 / 10%)",
+				btn_hover_bg: "rgb(40, 46, 51)",
+				btn_hover_border: "rgb(110, 118, 129)"
 			}
 		},
   },

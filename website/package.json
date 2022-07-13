@@ -9,16 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^2.9.3",
+    "@reduxjs/toolkit": "^1.8.3",
     "@uiw/react-markdown-preview": "^4.0.18",
     "babel-plugin-macros": "^3.1.0",
     "next": "12.2.0",
     "next-auth": "^4.7.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-hook-form": "^7.33.1",
     "react-markdown": "^8.0.3",
-    "react-query": "^3.39.1",
+    "react-redux": "^8.0.2",
     "styled-components": "^5.3.5",
     "twin.macro": "^2.8.2",
+    "zod": "^3.17.3",
     "zustand": "4.0.0-rc.1"
   },
   "devDependencies": {
