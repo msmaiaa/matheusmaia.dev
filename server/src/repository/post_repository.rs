@@ -35,4 +35,15 @@ impl PostRepository {
             .exec()
             .await
     }
+    pub async fn delete_post(
+        &self,
+        id: &i32,
+    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
+        self.client
+            .post()
+            .find_unique(post::id::equals(*id))
+            .delete()
+            .exec()
+            .await
+    }
 }

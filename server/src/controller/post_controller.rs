@@ -1,4 +1,4 @@
-use poem::web::Data;
+use poem::{web::Data, Request};
 use poem_openapi::{payload::Json, ApiResponse, OpenApi};
 
 use crate::{
@@ -13,6 +13,12 @@ pub struct PostController;
 enum CreatePostResponse {
     #[oai(status = 201)]
     Created(Json<Post>),
+}
+
+#[derive(ApiResponse)]
+enum DeletePostResponse {
+    #[oai(status = 204)]
+    Deleted,
 }
 
 #[OpenApi(prefix_path = "/post")]
@@ -41,5 +47,20 @@ impl PostController {
             .await
             .map(|post| CreatePostResponse::Created(Json(post)))
             .map_err(|e| e.into())
+    }
+
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete(
+        &self,
+        data: Data<&Context>,
+        _auth: JWTAuthorization,
+        req: &Request,
+    ) -> Result<DeletePostResponse, ResponseError> {
+        //	TODO: dont use fucking expect lol
+        let id = req.path_params::<i32>().expect("error on /post/:id delete");
+        crate::service::PostService::delete_post(data.prisma.to_owned(), &id)
+            .await
+            .map(|_| DeletePostResponse::Deleted)
+            .map_err(ResponseError::from)
     }
 }
