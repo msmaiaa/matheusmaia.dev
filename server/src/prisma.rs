@@ -19,7 +19,7 @@ pub use prisma_client_rust::{queries::Error as QueryError, NewClientError};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
-static DATAMODEL_STR : & 'static str = "datasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"cargo prisma\"\n  output   = \"../src/prisma.rs\"\n}\n\nmodel User {\n  id       Int     @id @default(autoincrement())\n  username String\n  password String\n  admin    Boolean\n  Post     Post[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @default(now())\n}\n\nmodel Post {\n  id        Int     @id @default(autoincrement())\n  title     String  @unique\n  published Boolean @default(false)\n\n  author   User @relation(fields: [authorId], references: [id])\n  authorId Int\n\n  tags TagOnPost[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel TagOnPost {\n  post   Post @relation(fields: [postId], references: [id])\n  postId Int\n\n  tag   Tag @relation(fields: [tagId], references: [id])\n  tagId Int\n\n  @@id([postId, tagId])\n}\n\nmodel Tag {\n  id        Int         @id @default(autoincrement())\n  name      String      @unique\n  TagOnPost TagOnPost[]\n}\n" ;
+static DATAMODEL_STR : & 'static str = "datasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"cargo prisma\"\n  output   = \"../src/prisma.rs\"\n}\n\nmodel User {\n  id       Int     @id @default(autoincrement())\n  username String\n  password String\n  admin    Boolean\n  posts    Post[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @default(now())\n}\n\nmodel Post {\n  id        Int     @id @default(autoincrement())\n  title     String  @unique\n  content   String  @db.MediumText\n  published Boolean @default(false)\n\n  author   User @relation(fields: [authorId], references: [id])\n  authorId Int\n\n  tags Tag[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Tag {\n  id        Int    @id @default(autoincrement())\n  name      String @unique\n  TagOnPost Post[]\n}\n" ;
 static DATABASE_STR: &'static str = "mysql";
 pub async fn new_client() -> Result<_prisma::PrismaClient, NewClientError> {
     let config = parse_configuration(DATAMODEL_STR)?.subject;
@@ -244,18 +244,18 @@ pub mod user {
             }
         }
     }
-    pub mod post {
+    pub mod posts {
         use super::super::*;
         use super::_prisma::*;
         use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
         pub fn some(value: Vec<post::WhereParam>) -> WhereParam {
-            WhereParam::PostSome(value)
+            WhereParam::PostsSome(value)
         }
         pub fn every(value: Vec<post::WhereParam>) -> WhereParam {
-            WhereParam::PostEvery(value)
+            WhereParam::PostsEvery(value)
         }
         pub fn none(value: Vec<post::WhereParam>) -> WhereParam {
-            WhereParam::PostNone(value)
+            WhereParam::PostsNone(value)
         }
         pub struct Fetch {
             args: post::ManyArgs,
@@ -284,7 +284,7 @@ pub mod user {
         }
         impl From<Fetch> for WithParam {
             fn from(fetch: Fetch) -> Self {
-                WithParam::Post(fetch.args)
+                WithParam::Posts(fetch.args)
             }
         }
         pub fn fetch(params: Vec<post::WhereParam>) -> Fetch {
@@ -296,12 +296,12 @@ pub mod user {
             Link(params).into()
         }
         pub fn unlink(params: Vec<post::UniqueWhereParam>) -> SetParam {
-            SetParam::UnlinkPost(params)
+            SetParam::UnlinkPosts(params)
         }
         pub struct Link(Vec<post::UniqueWhereParam>);
         impl From<Link> for SetParam {
             fn from(value: Link) -> Self {
-                Self::LinkPost(value.0)
+                Self::LinkPosts(value.0)
             }
         }
     }
@@ -413,31 +413,31 @@ pub mod user {
         pub password: String,
         #[serde(rename = "admin")]
         pub admin: bool,
-        #[serde(rename = "Post")]
-        pub post: Option<Vec<super::post::Data>>,
+        #[serde(rename = "posts")]
+        pub posts: Option<Vec<super::post::Data>>,
         #[serde(rename = "createdAt")]
         pub created_at: chrono::DateTime<chrono::FixedOffset>,
         #[serde(rename = "updatedAt")]
         pub updated_at: chrono::DateTime<chrono::FixedOffset>,
     }
     impl Data {
-        pub fn post(&self) -> Result<&Vec<super::post::Data>, &'static str> {
-            self.post
+        pub fn posts(&self) -> Result<&Vec<super::post::Data>, &'static str> {
+            self.posts
                 .as_ref()
-                .ok_or("Attempted to access 'post' but did not fetch it using the .with() syntax")
+                .ok_or("Attempted to access 'posts' but did not fetch it using the .with() syntax")
         }
     }
     #[derive(Clone)]
     pub enum WithParam {
-        Post(super::post::ManyArgs),
+        Posts(super::post::ManyArgs),
     }
     impl Into<Selection> for WithParam {
         fn into(self) -> Selection {
             match self {
-                Self::Post(args) => {
+                Self::Posts(args) => {
                     let (arguments, mut nested_selections) = args.to_graphql();
                     nested_selections.extend(super::post::_outputs());
-                    let mut builder = Selection::builder("Post");
+                    let mut builder = Selection::builder("posts");
                     builder
                         .nested_selections(nested_selections)
                         .set_arguments(arguments);
@@ -456,8 +456,8 @@ pub mod user {
         SetUsername(String),
         SetPassword(String),
         SetAdmin(bool),
-        LinkPost(Vec<super::post::UniqueWhereParam>),
-        UnlinkPost(Vec<super::post::UniqueWhereParam>),
+        LinkPosts(Vec<super::post::UniqueWhereParam>),
+        UnlinkPosts(Vec<super::post::UniqueWhereParam>),
         SetCreatedAt(chrono::DateTime<chrono::FixedOffset>),
         SetUpdatedAt(chrono::DateTime<chrono::FixedOffset>),
     }
@@ -500,8 +500,8 @@ pub mod user {
                     ("password".to_string(), PrismaValue::String(value))
                 }
                 SetParam::SetAdmin(value) => ("admin".to_string(), PrismaValue::Boolean(value)),
-                SetParam::LinkPost(where_params) => (
-                    "Post".to_string(),
+                SetParam::LinkPosts(where_params) => (
+                    "posts".to_string(),
                     PrismaValue::Object(vec![(
                         "connect".to_string(),
                         PrismaValue::Object(transform_equals(
@@ -511,8 +511,8 @@ pub mod user {
                         )),
                     )]),
                 ),
-                SetParam::UnlinkPost(where_params) => (
-                    "Post".to_string(),
+                SetParam::UnlinkPosts(where_params) => (
+                    "posts".to_string(),
                     PrismaValue::Object(vec![(
                         "disconnect".to_string(),
                         PrismaValue::Object(
@@ -620,9 +620,9 @@ pub mod user {
         PasswordEndsWith(String),
         PasswordNot(String),
         AdminEquals(bool),
-        PostSome(Vec<super::post::WhereParam>),
-        PostEvery(Vec<super::post::WhereParam>),
-        PostNone(Vec<super::post::WhereParam>),
+        PostsSome(Vec<super::post::WhereParam>),
+        PostsEvery(Vec<super::post::WhereParam>),
+        PostsNone(Vec<super::post::WhereParam>),
         CreatedAtEquals(chrono::DateTime<chrono::FixedOffset>),
         CreatedAtInVec(Vec<chrono::DateTime<chrono::FixedOffset>>),
         CreatedAtNotInVec(Vec<chrono::DateTime<chrono::FixedOffset>>),
@@ -905,8 +905,8 @@ pub mod user {
                         PrismaValue::Boolean(value),
                     )]),
                 ),
-                Self::PostSome(value) => (
-                    "Post".to_string(),
+                Self::PostsSome(value) => (
+                    "posts".to_string(),
                     SerializedWhereValue::Object(vec![(
                         "some".to_string(),
                         PrismaValue::Object(transform_equals(
@@ -914,8 +914,8 @@ pub mod user {
                         )),
                     )]),
                 ),
-                Self::PostEvery(value) => (
-                    "Post".to_string(),
+                Self::PostsEvery(value) => (
+                    "posts".to_string(),
                     SerializedWhereValue::Object(vec![(
                         "every".to_string(),
                         PrismaValue::Object(transform_equals(
@@ -923,8 +923,8 @@ pub mod user {
                         )),
                     )]),
                 ),
-                Self::PostNone(value) => (
-                    "Post".to_string(),
+                Self::PostsNone(value) => (
+                    "posts".to_string(),
                     SerializedWhereValue::Object(vec![(
                         "none".to_string(),
                         PrismaValue::Object(transform_equals(
@@ -1281,6 +1281,56 @@ pub mod post {
             }
         }
     }
+    pub mod content {
+        use super::super::*;
+        use super::_prisma::*;
+        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
+        pub fn set<T: From<Set>>(value: String) -> T {
+            Set(value).into()
+        }
+        pub fn equals(value: String) -> WhereParam {
+            WhereParam::ContentEquals(value).into()
+        }
+        pub fn order(direction: Direction) -> OrderByParam {
+            OrderByParam::Content(direction)
+        }
+        pub fn in_vec(value: Vec<String>) -> WhereParam {
+            WhereParam::ContentInVec(value)
+        }
+        pub fn not_in_vec(value: Vec<String>) -> WhereParam {
+            WhereParam::ContentNotInVec(value)
+        }
+        pub fn lt(value: String) -> WhereParam {
+            WhereParam::ContentLt(value)
+        }
+        pub fn lte(value: String) -> WhereParam {
+            WhereParam::ContentLte(value)
+        }
+        pub fn gt(value: String) -> WhereParam {
+            WhereParam::ContentGt(value)
+        }
+        pub fn gte(value: String) -> WhereParam {
+            WhereParam::ContentGte(value)
+        }
+        pub fn contains(value: String) -> WhereParam {
+            WhereParam::ContentContains(value)
+        }
+        pub fn starts_with(value: String) -> WhereParam {
+            WhereParam::ContentStartsWith(value)
+        }
+        pub fn ends_with(value: String) -> WhereParam {
+            WhereParam::ContentEndsWith(value)
+        }
+        pub fn not(value: String) -> WhereParam {
+            WhereParam::ContentNot(value)
+        }
+        pub struct Set(String);
+        impl From<Set> for SetParam {
+            fn from(value: Set) -> Self {
+                Self::SetContent(value.0)
+            }
+        }
+    }
     pub mod published {
         use super::super::*;
         use super::_prisma::*;
@@ -1397,24 +1447,24 @@ pub mod post {
         use super::super::*;
         use super::_prisma::*;
         use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn some(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn some(value: Vec<tag::WhereParam>) -> WhereParam {
             WhereParam::TagsSome(value)
         }
-        pub fn every(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn every(value: Vec<tag::WhereParam>) -> WhereParam {
             WhereParam::TagsEvery(value)
         }
-        pub fn none(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn none(value: Vec<tag::WhereParam>) -> WhereParam {
             WhereParam::TagsNone(value)
         }
         pub struct Fetch {
-            args: tag_on_post::ManyArgs,
+            args: tag::ManyArgs,
         }
         impl Fetch {
-            pub fn with(mut self, params: impl Into<tag_on_post::WithParam>) -> Self {
+            pub fn with(mut self, params: impl Into<tag::WithParam>) -> Self {
                 self.args = self.args.with(params.into());
                 self
             }
-            pub fn order_by(mut self, param: tag_on_post::OrderByParam) -> Self {
+            pub fn order_by(mut self, param: tag::OrderByParam) -> Self {
                 self.args = self.args.order_by(param);
                 self
             }
@@ -1426,7 +1476,7 @@ pub mod post {
                 self.args = self.args.take(value);
                 self
             }
-            pub fn cursor(mut self, value: impl Into<tag_on_post::Cursor>) -> Self {
+            pub fn cursor(mut self, value: impl Into<tag::Cursor>) -> Self {
                 self.args = self.args.cursor(value.into());
                 self
             }
@@ -1436,18 +1486,18 @@ pub mod post {
                 WithParam::Tags(fetch.args)
             }
         }
-        pub fn fetch(params: Vec<tag_on_post::WhereParam>) -> Fetch {
+        pub fn fetch(params: Vec<tag::WhereParam>) -> Fetch {
             Fetch {
-                args: tag_on_post::ManyArgs::new(params),
+                args: tag::ManyArgs::new(params),
             }
         }
-        pub fn link<T: From<Link>>(params: Vec<tag_on_post::UniqueWhereParam>) -> T {
+        pub fn link<T: From<Link>>(params: Vec<tag::UniqueWhereParam>) -> T {
             Link(params).into()
         }
-        pub fn unlink(params: Vec<tag_on_post::UniqueWhereParam>) -> SetParam {
+        pub fn unlink(params: Vec<tag::UniqueWhereParam>) -> SetParam {
             SetParam::UnlinkTags(params)
         }
-        pub struct Link(Vec<tag_on_post::UniqueWhereParam>);
+        pub struct Link(Vec<tag::UniqueWhereParam>);
         impl From<Link> for SetParam {
             fn from(value: Link) -> Self {
                 Self::LinkTags(value.0)
@@ -1540,6 +1590,7 @@ pub mod post {
         [
             "id",
             "title",
+            "content",
             "published",
             "authorId",
             "createdAt",
@@ -1558,6 +1609,8 @@ pub mod post {
         pub id: i32,
         #[serde(rename = "title")]
         pub title: String,
+        #[serde(rename = "content")]
+        pub content: String,
         #[serde(rename = "published")]
         pub published: bool,
         #[serde(rename = "author")]
@@ -1565,7 +1618,7 @@ pub mod post {
         #[serde(rename = "authorId")]
         pub author_id: i32,
         #[serde(rename = "tags")]
-        pub tags: Option<Vec<super::tag_on_post::Data>>,
+        pub tags: Option<Vec<super::tag::Data>>,
         #[serde(rename = "createdAt")]
         pub created_at: chrono::DateTime<chrono::FixedOffset>,
         #[serde(rename = "updatedAt")]
@@ -1578,7 +1631,7 @@ pub mod post {
                 .ok_or("Attempted to access 'author' but did not fetch it using the .with() syntax")
                 .map(|v| v.as_ref())
         }
-        pub fn tags(&self) -> Result<&Vec<super::tag_on_post::Data>, &'static str> {
+        pub fn tags(&self) -> Result<&Vec<super::tag::Data>, &'static str> {
             self.tags
                 .as_ref()
                 .ok_or("Attempted to access 'tags' but did not fetch it using the .with() syntax")
@@ -1587,7 +1640,7 @@ pub mod post {
     #[derive(Clone)]
     pub enum WithParam {
         Author(super::user::UniqueArgs),
-        Tags(super::tag_on_post::ManyArgs),
+        Tags(super::tag::ManyArgs),
     }
     impl Into<Selection> for WithParam {
         fn into(self) -> Selection {
@@ -1601,7 +1654,7 @@ pub mod post {
                 }
                 Self::Tags(args) => {
                     let (arguments, mut nested_selections) = args.to_graphql();
-                    nested_selections.extend(super::tag_on_post::_outputs());
+                    nested_selections.extend(super::tag::_outputs());
                     let mut builder = Selection::builder("tags");
                     builder
                         .nested_selections(nested_selections)
@@ -1619,6 +1672,7 @@ pub mod post {
         MultiplyId(i32),
         DivideId(i32),
         SetTitle(String),
+        SetContent(String),
         SetPublished(bool),
         LinkAuthor(super::user::UniqueWhereParam),
         SetAuthorId(i32),
@@ -1626,8 +1680,8 @@ pub mod post {
         DecrementAuthorId(i32),
         MultiplyAuthorId(i32),
         DivideAuthorId(i32),
-        LinkTags(Vec<super::tag_on_post::UniqueWhereParam>),
-        UnlinkTags(Vec<super::tag_on_post::UniqueWhereParam>),
+        LinkTags(Vec<super::tag::UniqueWhereParam>),
+        UnlinkTags(Vec<super::tag::UniqueWhereParam>),
         SetCreatedAt(chrono::DateTime<chrono::FixedOffset>),
         SetUpdatedAt(chrono::DateTime<chrono::FixedOffset>),
     }
@@ -1664,6 +1718,7 @@ pub mod post {
                     )]),
                 ),
                 SetParam::SetTitle(value) => ("title".to_string(), PrismaValue::String(value)),
+                SetParam::SetContent(value) => ("content".to_string(), PrismaValue::String(value)),
                 SetParam::SetPublished(value) => {
                     ("published".to_string(), PrismaValue::Boolean(value))
                 }
@@ -1714,7 +1769,7 @@ pub mod post {
                         PrismaValue::Object(transform_equals(
                             where_params
                                 .into_iter()
-                                .map(Into::<super::tag_on_post::WhereParam>::into),
+                                .map(Into::<super::tag::WhereParam>::into),
                         )),
                     )]),
                 ),
@@ -1726,7 +1781,7 @@ pub mod post {
                             transform_equals(
                                 where_params
                                     .into_iter()
-                                    .map(Into::<super::tag_on_post::WhereParam>::into),
+                                    .map(Into::<super::tag::WhereParam>::into),
                             )
                             .into_iter()
                             .collect(),
@@ -1746,6 +1801,7 @@ pub mod post {
     pub enum OrderByParam {
         Id(Direction),
         Title(Direction),
+        Content(Direction),
         Published(Direction),
         AuthorId(Direction),
         CreatedAt(Direction),
@@ -1759,6 +1815,10 @@ pub mod post {
                 }
                 Self::Title(direction) => (
                     "title".to_string(),
+                    PrismaValue::String(direction.to_string()),
+                ),
+                Self::Content(direction) => (
+                    "content".to_string(),
                     PrismaValue::String(direction.to_string()),
                 ),
                 Self::Published(direction) => (
@@ -1817,6 +1877,17 @@ pub mod post {
         TitleStartsWith(String),
         TitleEndsWith(String),
         TitleNot(String),
+        ContentEquals(String),
+        ContentInVec(Vec<String>),
+        ContentNotInVec(Vec<String>),
+        ContentLt(String),
+        ContentLte(String),
+        ContentGt(String),
+        ContentGte(String),
+        ContentContains(String),
+        ContentStartsWith(String),
+        ContentEndsWith(String),
+        ContentNot(String),
         PublishedEquals(bool),
         AuthorIs(Vec<super::user::WhereParam>),
         AuthorIsNot(Vec<super::user::WhereParam>),
@@ -1828,9 +1899,9 @@ pub mod post {
         AuthorIdGt(i32),
         AuthorIdGte(i32),
         AuthorIdNot(i32),
-        TagsSome(Vec<super::tag_on_post::WhereParam>),
-        TagsEvery(Vec<super::tag_on_post::WhereParam>),
-        TagsNone(Vec<super::tag_on_post::WhereParam>),
+        TagsSome(Vec<super::tag::WhereParam>),
+        TagsEvery(Vec<super::tag::WhereParam>),
+        TagsNone(Vec<super::tag::WhereParam>),
         CreatedAtEquals(chrono::DateTime<chrono::FixedOffset>),
         CreatedAtInVec(Vec<chrono::DateTime<chrono::FixedOffset>>),
         CreatedAtNotInVec(Vec<chrono::DateTime<chrono::FixedOffset>>),
@@ -2020,6 +2091,87 @@ pub mod post {
                 ),
                 Self::TitleNot(value) => (
                     "title".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "not".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentEquals(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "equals".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentInVec(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "in".to_string(),
+                        PrismaValue::List(
+                            value.into_iter().map(|v| PrismaValue::String(v)).collect(),
+                        ),
+                    )]),
+                ),
+                Self::ContentNotInVec(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "notIn".to_string(),
+                        PrismaValue::List(
+                            value.into_iter().map(|v| PrismaValue::String(v)).collect(),
+                        ),
+                    )]),
+                ),
+                Self::ContentLt(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "lt".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentLte(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "lte".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentGt(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "gt".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentGte(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "gte".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentContains(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "contains".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentStartsWith(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "startsWith".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentEndsWith(value) => (
+                    "content".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "endsWith".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::ContentNot(value) => (
+                    "content".to_string(),
                     SerializedWhereValue::Object(vec![(
                         "not".to_string(),
                         PrismaValue::String(value),
@@ -2328,10 +2480,12 @@ pub mod post {
         pub fn create(
             self,
             title: title::Set,
+            content: content::Set,
             author: author::Link,
             mut _params: Vec<SetParam>,
         ) -> Create<'a> {
             _params.push(title.into());
+            _params.push(content.into());
             _params.push(author.into());
             Create::new(
                 self.client._new_query_context(),
@@ -2363,725 +2517,16 @@ pub mod post {
         pub fn upsert(
             self,
             _where: UniqueWhereParam,
-            _create: (title::Set, author::Link, Vec<SetParam>),
+            _create: (title::Set, content::Set, author::Link, Vec<SetParam>),
             _update: Vec<SetParam>,
         ) -> Upsert<'a> {
-            let (title, author, mut _params) = _create;
+            let (title, content, author, mut _params) = _create;
             _params.push(title.into());
+            _params.push(content.into());
             _params.push(author.into());
             Upsert::new(
                 self.client._new_query_context(),
                 QueryInfo::new("Post", _outputs()),
-                _where.into(),
-                _params,
-                _update,
-            )
-        }
-    }
-}
-pub mod tag_on_post {
-    use super::_prisma::*;
-    use super::*;
-    pub mod post {
-        use super::super::*;
-        use super::_prisma::*;
-        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn is(value: Vec<post::WhereParam>) -> WhereParam {
-            WhereParam::PostIs(value)
-        }
-        pub fn is_not(value: Vec<post::WhereParam>) -> WhereParam {
-            WhereParam::PostIsNot(value)
-        }
-        pub struct Fetch {
-            args: post::UniqueArgs,
-        }
-        impl Fetch {
-            pub fn with(mut self, params: impl Into<post::WithParam>) -> Self {
-                self.args = self.args.with(params.into());
-                self
-            }
-        }
-        impl From<Fetch> for WithParam {
-            fn from(fetch: Fetch) -> Self {
-                WithParam::Post(fetch.args)
-            }
-        }
-        pub fn fetch() -> Fetch {
-            Fetch {
-                args: post::UniqueArgs::new(),
-            }
-        }
-        pub fn link<T: From<Link>>(value: post::UniqueWhereParam) -> T {
-            Link(value).into()
-        }
-        pub struct Link(post::UniqueWhereParam);
-        impl From<Link> for SetParam {
-            fn from(value: Link) -> Self {
-                Self::LinkPost(value.0)
-            }
-        }
-    }
-    pub mod post_id {
-        use super::super::*;
-        use super::_prisma::*;
-        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn set<T: From<Set>>(value: i32) -> T {
-            Set(value).into()
-        }
-        pub fn equals(value: i32) -> WhereParam {
-            WhereParam::PostIdEquals(value).into()
-        }
-        pub fn order(direction: Direction) -> OrderByParam {
-            OrderByParam::PostId(direction)
-        }
-        pub fn in_vec(value: Vec<i32>) -> WhereParam {
-            WhereParam::PostIdInVec(value)
-        }
-        pub fn not_in_vec(value: Vec<i32>) -> WhereParam {
-            WhereParam::PostIdNotInVec(value)
-        }
-        pub fn lt(value: i32) -> WhereParam {
-            WhereParam::PostIdLt(value)
-        }
-        pub fn lte(value: i32) -> WhereParam {
-            WhereParam::PostIdLte(value)
-        }
-        pub fn gt(value: i32) -> WhereParam {
-            WhereParam::PostIdGt(value)
-        }
-        pub fn gte(value: i32) -> WhereParam {
-            WhereParam::PostIdGte(value)
-        }
-        pub fn not(value: i32) -> WhereParam {
-            WhereParam::PostIdNot(value)
-        }
-        pub fn increment(value: i32) -> SetParam {
-            SetParam::IncrementPostId(value)
-        }
-        pub fn decrement(value: i32) -> SetParam {
-            SetParam::DecrementPostId(value)
-        }
-        pub fn multiply(value: i32) -> SetParam {
-            SetParam::MultiplyPostId(value)
-        }
-        pub fn divide(value: i32) -> SetParam {
-            SetParam::DividePostId(value)
-        }
-        pub struct Set(i32);
-        impl From<Set> for SetParam {
-            fn from(value: Set) -> Self {
-                Self::SetPostId(value.0)
-            }
-        }
-    }
-    pub mod tag {
-        use super::super::*;
-        use super::_prisma::*;
-        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn is(value: Vec<tag::WhereParam>) -> WhereParam {
-            WhereParam::TagIs(value)
-        }
-        pub fn is_not(value: Vec<tag::WhereParam>) -> WhereParam {
-            WhereParam::TagIsNot(value)
-        }
-        pub struct Fetch {
-            args: tag::UniqueArgs,
-        }
-        impl Fetch {
-            pub fn with(mut self, params: impl Into<tag::WithParam>) -> Self {
-                self.args = self.args.with(params.into());
-                self
-            }
-        }
-        impl From<Fetch> for WithParam {
-            fn from(fetch: Fetch) -> Self {
-                WithParam::Tag(fetch.args)
-            }
-        }
-        pub fn fetch() -> Fetch {
-            Fetch {
-                args: tag::UniqueArgs::new(),
-            }
-        }
-        pub fn link<T: From<Link>>(value: tag::UniqueWhereParam) -> T {
-            Link(value).into()
-        }
-        pub struct Link(tag::UniqueWhereParam);
-        impl From<Link> for SetParam {
-            fn from(value: Link) -> Self {
-                Self::LinkTag(value.0)
-            }
-        }
-    }
-    pub mod tag_id {
-        use super::super::*;
-        use super::_prisma::*;
-        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn set<T: From<Set>>(value: i32) -> T {
-            Set(value).into()
-        }
-        pub fn equals(value: i32) -> WhereParam {
-            WhereParam::TagIdEquals(value).into()
-        }
-        pub fn order(direction: Direction) -> OrderByParam {
-            OrderByParam::TagId(direction)
-        }
-        pub fn in_vec(value: Vec<i32>) -> WhereParam {
-            WhereParam::TagIdInVec(value)
-        }
-        pub fn not_in_vec(value: Vec<i32>) -> WhereParam {
-            WhereParam::TagIdNotInVec(value)
-        }
-        pub fn lt(value: i32) -> WhereParam {
-            WhereParam::TagIdLt(value)
-        }
-        pub fn lte(value: i32) -> WhereParam {
-            WhereParam::TagIdLte(value)
-        }
-        pub fn gt(value: i32) -> WhereParam {
-            WhereParam::TagIdGt(value)
-        }
-        pub fn gte(value: i32) -> WhereParam {
-            WhereParam::TagIdGte(value)
-        }
-        pub fn not(value: i32) -> WhereParam {
-            WhereParam::TagIdNot(value)
-        }
-        pub fn increment(value: i32) -> SetParam {
-            SetParam::IncrementTagId(value)
-        }
-        pub fn decrement(value: i32) -> SetParam {
-            SetParam::DecrementTagId(value)
-        }
-        pub fn multiply(value: i32) -> SetParam {
-            SetParam::MultiplyTagId(value)
-        }
-        pub fn divide(value: i32) -> SetParam {
-            SetParam::DivideTagId(value)
-        }
-        pub struct Set(i32);
-        impl From<Set> for SetParam {
-            fn from(value: Set) -> Self {
-                Self::SetTagId(value.0)
-            }
-        }
-    }
-    pub fn post_id_tag_id<T: From<UniqueWhereParam>>(post_id: i32, tag_id: i32) -> T {
-        UniqueWhereParam::PostIdTagIdEquals(post_id, tag_id).into()
-    }
-    pub fn _outputs() -> Vec<Selection> {
-        ["postId", "tagId"]
-            .into_iter()
-            .map(|o| {
-                let builder = Selection::builder(o);
-                builder.build()
-            })
-            .collect()
-    }
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Data {
-        #[serde(rename = "post")]
-        pub post: Option<Box<super::post::Data>>,
-        #[serde(rename = "postId")]
-        pub post_id: i32,
-        #[serde(rename = "tag")]
-        pub tag: Option<Box<super::tag::Data>>,
-        #[serde(rename = "tagId")]
-        pub tag_id: i32,
-    }
-    impl Data {
-        pub fn post(&self) -> Result<&super::post::Data, &'static str> {
-            self.post
-                .as_ref()
-                .ok_or("Attempted to access 'post' but did not fetch it using the .with() syntax")
-                .map(|v| v.as_ref())
-        }
-        pub fn tag(&self) -> Result<&super::tag::Data, &'static str> {
-            self.tag
-                .as_ref()
-                .ok_or("Attempted to access 'tag' but did not fetch it using the .with() syntax")
-                .map(|v| v.as_ref())
-        }
-    }
-    #[derive(Clone)]
-    pub enum WithParam {
-        Post(super::post::UniqueArgs),
-        Tag(super::tag::UniqueArgs),
-    }
-    impl Into<Selection> for WithParam {
-        fn into(self) -> Selection {
-            match self {
-                Self::Post(args) => {
-                    let mut selections = super::post::_outputs();
-                    selections.extend(args.with_params.into_iter().map(Into::<Selection>::into));
-                    let mut builder = Selection::builder("post");
-                    builder.nested_selections(selections);
-                    builder.build()
-                }
-                Self::Tag(args) => {
-                    let mut selections = super::tag::_outputs();
-                    selections.extend(args.with_params.into_iter().map(Into::<Selection>::into));
-                    let mut builder = Selection::builder("tag");
-                    builder.nested_selections(selections);
-                    builder.build()
-                }
-            }
-        }
-    }
-    #[derive(Clone)]
-    pub enum SetParam {
-        LinkPost(super::post::UniqueWhereParam),
-        SetPostId(i32),
-        IncrementPostId(i32),
-        DecrementPostId(i32),
-        MultiplyPostId(i32),
-        DividePostId(i32),
-        LinkTag(super::tag::UniqueWhereParam),
-        SetTagId(i32),
-        IncrementTagId(i32),
-        DecrementTagId(i32),
-        MultiplyTagId(i32),
-        DivideTagId(i32),
-    }
-    impl Into<(String, PrismaValue)> for SetParam {
-        fn into(self) -> (String, PrismaValue) {
-            match self {
-                SetParam::LinkPost(where_param) => (
-                    "post".to_string(),
-                    PrismaValue::Object(vec![(
-                        "connect".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            vec![Into::<super::post::WhereParam>::into(where_param)].into_iter(),
-                        )),
-                    )]),
-                ),
-                SetParam::SetPostId(value) => {
-                    ("postId".to_string(), PrismaValue::Int(value as i64))
-                }
-                SetParam::IncrementPostId(value) => (
-                    "postId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "increment".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::DecrementPostId(value) => (
-                    "postId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "decrement".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::MultiplyPostId(value) => (
-                    "postId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "multiply".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::DividePostId(value) => (
-                    "postId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "divide".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::LinkTag(where_param) => (
-                    "tag".to_string(),
-                    PrismaValue::Object(vec![(
-                        "connect".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            vec![Into::<super::tag::WhereParam>::into(where_param)].into_iter(),
-                        )),
-                    )]),
-                ),
-                SetParam::SetTagId(value) => ("tagId".to_string(), PrismaValue::Int(value as i64)),
-                SetParam::IncrementTagId(value) => (
-                    "tagId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "increment".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::DecrementTagId(value) => (
-                    "tagId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "decrement".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::MultiplyTagId(value) => (
-                    "tagId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "multiply".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                SetParam::DivideTagId(value) => (
-                    "tagId".to_string(),
-                    PrismaValue::Object(vec![(
-                        "divide".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-            }
-        }
-    }
-    #[derive(Clone)]
-    pub enum OrderByParam {
-        PostId(Direction),
-        TagId(Direction),
-    }
-    impl Into<(String, PrismaValue)> for OrderByParam {
-        fn into(self) -> (String, PrismaValue) {
-            match self {
-                Self::PostId(direction) => (
-                    "postId".to_string(),
-                    PrismaValue::String(direction.to_string()),
-                ),
-                Self::TagId(direction) => (
-                    "tagId".to_string(),
-                    PrismaValue::String(direction.to_string()),
-                ),
-            }
-        }
-    }
-    #[derive(Clone)]
-    pub enum Cursor {}
-    impl Into<(String, PrismaValue)> for Cursor {
-        fn into(self) -> (String, PrismaValue) {
-            match self {}
-        }
-    }
-    #[derive(Clone)]
-    pub enum WhereParam {
-        Not(Vec<WhereParam>),
-        Or(Vec<WhereParam>),
-        And(Vec<WhereParam>),
-        PostIdTagIdEquals(i32, i32),
-        PostIs(Vec<super::post::WhereParam>),
-        PostIsNot(Vec<super::post::WhereParam>),
-        PostIdEquals(i32),
-        PostIdInVec(Vec<i32>),
-        PostIdNotInVec(Vec<i32>),
-        PostIdLt(i32),
-        PostIdLte(i32),
-        PostIdGt(i32),
-        PostIdGte(i32),
-        PostIdNot(i32),
-        TagIs(Vec<super::tag::WhereParam>),
-        TagIsNot(Vec<super::tag::WhereParam>),
-        TagIdEquals(i32),
-        TagIdInVec(Vec<i32>),
-        TagIdNotInVec(Vec<i32>),
-        TagIdLt(i32),
-        TagIdLte(i32),
-        TagIdGt(i32),
-        TagIdGte(i32),
-        TagIdNot(i32),
-    }
-    impl Into<SerializedWhere> for WhereParam {
-        fn into(self) -> SerializedWhere {
-            match self {
-                Self::Not(value) => (
-                    "NOT".to_string(),
-                    SerializedWhereValue::List(
-                        value
-                            .into_iter()
-                            .map(|v| PrismaValue::Object(transform_equals(vec![v].into_iter())))
-                            .collect(),
-                    ),
-                ),
-                Self::Or(value) => (
-                    "OR".to_string(),
-                    SerializedWhereValue::List(
-                        value
-                            .into_iter()
-                            .map(|v| PrismaValue::Object(transform_equals(vec![v].into_iter())))
-                            .collect(),
-                    ),
-                ),
-                Self::And(value) => (
-                    "AND".to_string(),
-                    SerializedWhereValue::List(
-                        value
-                            .into_iter()
-                            .map(|v| PrismaValue::Object(transform_equals(vec![v].into_iter())))
-                            .collect(),
-                    ),
-                ),
-                Self::PostIdTagIdEquals(post_id, tag_id) => (
-                    "postId_tagId".to_string(),
-                    SerializedWhereValue::Object(vec![
-                        ("postId".to_string(), PrismaValue::Int(post_id as i64)),
-                        ("tagId".to_string(), PrismaValue::Int(tag_id as i64)),
-                    ]),
-                ),
-                Self::PostIs(value) => (
-                    "post".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "is".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            value.into_iter().map(Into::<SerializedWhere>::into),
-                        )),
-                    )]),
-                ),
-                Self::PostIsNot(value) => (
-                    "post".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "isNot".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            value.into_iter().map(Into::<SerializedWhere>::into),
-                        )),
-                    )]),
-                ),
-                Self::PostIdEquals(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "equals".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::PostIdInVec(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "in".to_string(),
-                        PrismaValue::List(
-                            value
-                                .into_iter()
-                                .map(|v| PrismaValue::Int(v as i64))
-                                .collect(),
-                        ),
-                    )]),
-                ),
-                Self::PostIdNotInVec(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "notIn".to_string(),
-                        PrismaValue::List(
-                            value
-                                .into_iter()
-                                .map(|v| PrismaValue::Int(v as i64))
-                                .collect(),
-                        ),
-                    )]),
-                ),
-                Self::PostIdLt(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "lt".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::PostIdLte(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "lte".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::PostIdGt(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "gt".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::PostIdGte(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "gte".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::PostIdNot(value) => (
-                    "postId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "not".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIs(value) => (
-                    "tag".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "is".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            value.into_iter().map(Into::<SerializedWhere>::into),
-                        )),
-                    )]),
-                ),
-                Self::TagIsNot(value) => (
-                    "tag".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "isNot".to_string(),
-                        PrismaValue::Object(transform_equals(
-                            value.into_iter().map(Into::<SerializedWhere>::into),
-                        )),
-                    )]),
-                ),
-                Self::TagIdEquals(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "equals".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIdInVec(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "in".to_string(),
-                        PrismaValue::List(
-                            value
-                                .into_iter()
-                                .map(|v| PrismaValue::Int(v as i64))
-                                .collect(),
-                        ),
-                    )]),
-                ),
-                Self::TagIdNotInVec(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "notIn".to_string(),
-                        PrismaValue::List(
-                            value
-                                .into_iter()
-                                .map(|v| PrismaValue::Int(v as i64))
-                                .collect(),
-                        ),
-                    )]),
-                ),
-                Self::TagIdLt(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "lt".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIdLte(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "lte".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIdGt(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "gt".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIdGte(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "gte".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-                Self::TagIdNot(value) => (
-                    "tagId".to_string(),
-                    SerializedWhereValue::Object(vec![(
-                        "not".to_string(),
-                        PrismaValue::Int(value as i64),
-                    )]),
-                ),
-            }
-        }
-    }
-    #[derive(Clone)]
-    pub enum UniqueWhereParam {
-        PostIdTagIdEquals(i32, i32),
-    }
-    impl From<UniqueWhereParam> for WhereParam {
-        fn from(value: UniqueWhereParam) -> Self {
-            match value {
-                UniqueWhereParam::PostIdTagIdEquals(post_id, tag_id) => {
-                    Self::PostIdTagIdEquals(post_id, tag_id)
-                }
-            }
-        }
-    }
-    impl From<Operator<Self>> for WhereParam {
-        fn from(op: Operator<Self>) -> Self {
-            match op {
-                Operator::Not(value) => Self::Not(value),
-                Operator::And(value) => Self::And(value),
-                Operator::Or(value) => Self::Or(value),
-            }
-        }
-    }
-    pub type UniqueArgs = prisma_client_rust::UniqueArgs<WithParam>;
-    pub type ManyArgs = prisma_client_rust::ManyArgs<WhereParam, WithParam, OrderByParam, Cursor>;
-    pub type Create<'a> = prisma_client_rust::Create<'a, SetParam, WithParam, Data>;
-    pub type FindUnique<'a> =
-        prisma_client_rust::FindUnique<'a, WhereParam, WithParam, SetParam, Data>;
-    pub type FindMany<'a> = prisma_client_rust::FindMany<
-        'a,
-        WhereParam,
-        WithParam,
-        OrderByParam,
-        Cursor,
-        SetParam,
-        Data,
-    >;
-    pub type FindFirst<'a> =
-        prisma_client_rust::FindFirst<'a, WhereParam, WithParam, OrderByParam, Cursor, Data>;
-    pub type Update<'a> = prisma_client_rust::Update<'a, WhereParam, SetParam, WithParam, Data>;
-    pub type UpdateMany<'a> = prisma_client_rust::UpdateMany<'a, WhereParam, SetParam>;
-    pub type Upsert<'a> = prisma_client_rust::Upsert<'a, WhereParam, SetParam, WithParam, Data>;
-    pub type Delete<'a> = prisma_client_rust::Delete<'a, WhereParam, WithParam, Data>;
-    pub type DeleteMany<'a> = prisma_client_rust::DeleteMany<'a, WhereParam>;
-    pub struct Actions<'a> {
-        pub client: &'a PrismaClient,
-    }
-    impl<'a> Actions<'a> {
-        pub fn create(
-            self,
-            post: post::Link,
-            tag: tag::Link,
-            mut _params: Vec<SetParam>,
-        ) -> Create<'a> {
-            _params.push(post.into());
-            _params.push(tag.into());
-            Create::new(
-                self.client._new_query_context(),
-                QueryInfo::new("TagOnPost", _outputs()),
-                _params,
-            )
-        }
-        pub fn find_unique(self, param: UniqueWhereParam) -> FindUnique<'a> {
-            FindUnique::new(
-                self.client._new_query_context(),
-                QueryInfo::new("TagOnPost", _outputs()),
-                param.into(),
-            )
-        }
-        pub fn find_first(self, params: Vec<WhereParam>) -> FindFirst<'a> {
-            FindFirst::new(
-                self.client._new_query_context(),
-                QueryInfo::new("TagOnPost", _outputs()),
-                params,
-            )
-        }
-        pub fn find_many(self, params: Vec<WhereParam>) -> FindMany<'a> {
-            FindMany::new(
-                self.client._new_query_context(),
-                QueryInfo::new("TagOnPost", _outputs()),
-                params,
-            )
-        }
-        pub fn upsert(
-            self,
-            _where: UniqueWhereParam,
-            _create: (post::Link, tag::Link, Vec<SetParam>),
-            _update: Vec<SetParam>,
-        ) -> Upsert<'a> {
-            let (post, tag, mut _params) = _create;
-            _params.push(post.into());
-            _params.push(tag.into());
-            Upsert::new(
-                self.client._new_query_context(),
-                QueryInfo::new("TagOnPost", _outputs()),
                 _where.into(),
                 _params,
                 _update,
@@ -3205,24 +2650,24 @@ pub mod tag {
         use super::super::*;
         use super::_prisma::*;
         use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
-        pub fn some(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn some(value: Vec<post::WhereParam>) -> WhereParam {
             WhereParam::TagOnPostSome(value)
         }
-        pub fn every(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn every(value: Vec<post::WhereParam>) -> WhereParam {
             WhereParam::TagOnPostEvery(value)
         }
-        pub fn none(value: Vec<tag_on_post::WhereParam>) -> WhereParam {
+        pub fn none(value: Vec<post::WhereParam>) -> WhereParam {
             WhereParam::TagOnPostNone(value)
         }
         pub struct Fetch {
-            args: tag_on_post::ManyArgs,
+            args: post::ManyArgs,
         }
         impl Fetch {
-            pub fn with(mut self, params: impl Into<tag_on_post::WithParam>) -> Self {
+            pub fn with(mut self, params: impl Into<post::WithParam>) -> Self {
                 self.args = self.args.with(params.into());
                 self
             }
-            pub fn order_by(mut self, param: tag_on_post::OrderByParam) -> Self {
+            pub fn order_by(mut self, param: post::OrderByParam) -> Self {
                 self.args = self.args.order_by(param);
                 self
             }
@@ -3234,7 +2679,7 @@ pub mod tag {
                 self.args = self.args.take(value);
                 self
             }
-            pub fn cursor(mut self, value: impl Into<tag_on_post::Cursor>) -> Self {
+            pub fn cursor(mut self, value: impl Into<post::Cursor>) -> Self {
                 self.args = self.args.cursor(value.into());
                 self
             }
@@ -3244,18 +2689,18 @@ pub mod tag {
                 WithParam::TagOnPost(fetch.args)
             }
         }
-        pub fn fetch(params: Vec<tag_on_post::WhereParam>) -> Fetch {
+        pub fn fetch(params: Vec<post::WhereParam>) -> Fetch {
             Fetch {
-                args: tag_on_post::ManyArgs::new(params),
+                args: post::ManyArgs::new(params),
             }
         }
-        pub fn link<T: From<Link>>(params: Vec<tag_on_post::UniqueWhereParam>) -> T {
+        pub fn link<T: From<Link>>(params: Vec<post::UniqueWhereParam>) -> T {
             Link(params).into()
         }
-        pub fn unlink(params: Vec<tag_on_post::UniqueWhereParam>) -> SetParam {
+        pub fn unlink(params: Vec<post::UniqueWhereParam>) -> SetParam {
             SetParam::UnlinkTagOnPost(params)
         }
-        pub struct Link(Vec<tag_on_post::UniqueWhereParam>);
+        pub struct Link(Vec<post::UniqueWhereParam>);
         impl From<Link> for SetParam {
             fn from(value: Link) -> Self {
                 Self::LinkTagOnPost(value.0)
@@ -3278,10 +2723,10 @@ pub mod tag {
         #[serde(rename = "name")]
         pub name: String,
         #[serde(rename = "TagOnPost")]
-        pub tag_on_post: Option<Vec<super::tag_on_post::Data>>,
+        pub tag_on_post: Option<Vec<super::post::Data>>,
     }
     impl Data {
-        pub fn tag_on_post(&self) -> Result<&Vec<super::tag_on_post::Data>, &'static str> {
+        pub fn tag_on_post(&self) -> Result<&Vec<super::post::Data>, &'static str> {
             self.tag_on_post.as_ref().ok_or(
                 "Attempted to access 'tag_on_post' but did not fetch it using the .with() syntax",
             )
@@ -3289,14 +2734,14 @@ pub mod tag {
     }
     #[derive(Clone)]
     pub enum WithParam {
-        TagOnPost(super::tag_on_post::ManyArgs),
+        TagOnPost(super::post::ManyArgs),
     }
     impl Into<Selection> for WithParam {
         fn into(self) -> Selection {
             match self {
                 Self::TagOnPost(args) => {
                     let (arguments, mut nested_selections) = args.to_graphql();
-                    nested_selections.extend(super::tag_on_post::_outputs());
+                    nested_selections.extend(super::post::_outputs());
                     let mut builder = Selection::builder("TagOnPost");
                     builder
                         .nested_selections(nested_selections)
@@ -3314,8 +2759,8 @@ pub mod tag {
         MultiplyId(i32),
         DivideId(i32),
         SetName(String),
-        LinkTagOnPost(Vec<super::tag_on_post::UniqueWhereParam>),
-        UnlinkTagOnPost(Vec<super::tag_on_post::UniqueWhereParam>),
+        LinkTagOnPost(Vec<super::post::UniqueWhereParam>),
+        UnlinkTagOnPost(Vec<super::post::UniqueWhereParam>),
     }
     impl Into<(String, PrismaValue)> for SetParam {
         fn into(self) -> (String, PrismaValue) {
@@ -3357,7 +2802,7 @@ pub mod tag {
                         PrismaValue::Object(transform_equals(
                             where_params
                                 .into_iter()
-                                .map(Into::<super::tag_on_post::WhereParam>::into),
+                                .map(Into::<super::post::WhereParam>::into),
                         )),
                     )]),
                 ),
@@ -3369,7 +2814,7 @@ pub mod tag {
                             transform_equals(
                                 where_params
                                     .into_iter()
-                                    .map(Into::<super::tag_on_post::WhereParam>::into),
+                                    .map(Into::<super::post::WhereParam>::into),
                             )
                             .into_iter()
                             .collect(),
@@ -3434,9 +2879,9 @@ pub mod tag {
         NameStartsWith(String),
         NameEndsWith(String),
         NameNot(String),
-        TagOnPostSome(Vec<super::tag_on_post::WhereParam>),
-        TagOnPostEvery(Vec<super::tag_on_post::WhereParam>),
-        TagOnPostNone(Vec<super::tag_on_post::WhereParam>),
+        TagOnPostSome(Vec<super::post::WhereParam>),
+        TagOnPostEvery(Vec<super::post::WhereParam>),
+        TagOnPostNone(Vec<super::post::WhereParam>),
     }
     impl Into<SerializedWhere> for WhereParam {
         fn into(self) -> SerializedWhere {
@@ -3798,9 +3243,6 @@ pub mod _prisma {
         pub fn post(&self) -> post::Actions {
             post::Actions { client: &self }
         }
-        pub fn tag_on_post(&self) -> tag_on_post::Actions {
-            tag_on_post::Actions { client: &self }
-        }
         pub fn tag(&self) -> tag::Actions {
             tag::Actions { client: &self }
         }
@@ -3838,6 +3280,8 @@ pub mod _prisma {
         Id,
         #[serde(rename = "title")]
         Title,
+        #[serde(rename = "content")]
+        Content,
         #[serde(rename = "published")]
         Published,
         #[serde(rename = "authorId")]
@@ -3852,25 +3296,11 @@ pub mod _prisma {
             match self {
                 Self::Id => "id".to_string(),
                 Self::Title => "title".to_string(),
+                Self::Content => "content".to_string(),
                 Self::Published => "published".to_string(),
                 Self::AuthorId => "authorId".to_string(),
                 Self::CreatedAt => "createdAt".to_string(),
                 Self::UpdatedAt => "updatedAt".to_string(),
-            }
-        }
-    }
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-    pub enum TagOnPostScalarFieldEnum {
-        #[serde(rename = "postId")]
-        PostId,
-        #[serde(rename = "tagId")]
-        TagId,
-    }
-    impl ToString for TagOnPostScalarFieldEnum {
-        fn to_string(&self) -> String {
-            match self {
-                Self::PostId => "postId".to_string(),
-                Self::TagId => "tagId".to_string(),
             }
         }
     }

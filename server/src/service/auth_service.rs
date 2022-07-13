@@ -25,7 +25,7 @@ impl AuthService {
             .unwrap_or_else(|_| return None);
         match found_user {
             Some(user) => match AuthService::compare_hash(&password, &user.password) {
-                true => return Some(AuthService::create_access_token(username)),
+                true => return Some(AuthService::create_access_token(&user.username, &user.id)),
                 false => return None,
             },
             None => {
@@ -36,7 +36,7 @@ impl AuthService {
                 user_repo
                     .create(&username, &hashed_pass, true)
                     .await
-                    .map(|_| Some(AuthService::create_access_token(username)))
+                    .map(|data| Some(AuthService::create_access_token(&data.username, &data.id)))
                     .unwrap_or(None)
             }
         }
@@ -49,7 +49,7 @@ impl AuthService {
         username == admin_username
     }
 
-    pub fn create_access_token(username: &str) -> String {
+    pub fn create_access_token(username: &str, id: &i32) -> String {
         let iat = Utc::now();
         let exp = iat + Duration::seconds(3600);
         let iat = iat.timestamp_millis();
@@ -59,6 +59,7 @@ impl AuthService {
             EncodingKey::from_secret(env::var("JWT_KEY").expect("JWT_KEY not set").as_bytes());
         let claims = TokenData {
             username: username.to_string(),
+            id: *id,
             iat,
             exp,
         };

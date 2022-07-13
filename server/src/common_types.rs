@@ -3,6 +3,7 @@ use poem_openapi::{payload::Json, ApiResponse, Object};
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TokenData {
     pub username: String,
+    pub id: i32,
     pub iat: i64,
     pub exp: i64,
 }
@@ -29,6 +30,7 @@ pub enum ResponseError {
     NotFound(Json<ErrorMessage>),
 }
 
+#[derive(Debug)]
 pub enum AppError {
     BadRequest(String),
     Unknown,
@@ -64,6 +66,29 @@ impl From<crate::prisma::tag::Data> for Tag {
     }
 }
 
+#[derive(Object)]
+pub struct User {
+    pub id: i32,
+    pub username: String,
+    pub password: String,
+    pub admin: bool,
+    pub posts: Option<Vec<Post>>,
+    pub created_at: chrono::DateTime<chrono::FixedOffset>,
+    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+}
+
+#[derive(Object)]
+pub struct Post {
+    pub id: i32,
+    pub title: String,
+    pub published: bool,
+    pub author: Option<User>,
+    pub author_id: i32,
+    pub tags: Option<Vec<Tag>>,
+    pub created_at: chrono::DateTime<chrono::FixedOffset>,
+    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+}
+
 #[derive(serde::Deserialize, Debug, Default)]
 pub struct Pageable {
     pub skip: Option<i64>,
@@ -73,4 +98,12 @@ pub struct Pageable {
 #[derive(serde::Deserialize, Debug, Default)]
 pub struct TagFilters {
     pub name: Option<String>,
+}
+
+#[derive(serde::Deserialize, Object)]
+pub struct CreatePostPayload {
+    pub title: String,
+    pub content: String,
+    pub published: Option<bool>,
+    pub tags: Option<Vec<i32>>,
 }

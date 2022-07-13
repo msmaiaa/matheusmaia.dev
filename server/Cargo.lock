@@ -2524,6 +2524,7 @@ checksum = "562918011994abe685b7a3f0e11116147349f7fd0d9691e4664ca929a54a8c00"
 dependencies = [
  "base64 0.13.0",
  "bytes",
+ "chrono",
  "derive_more",
  "futures-util",
  "mime",
