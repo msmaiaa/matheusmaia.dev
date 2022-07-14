@@ -58,4 +58,26 @@ impl PostService {
             },
         }
     }
+
+    pub async fn update_post(
+        prisma: std::sync::Arc<PrismaClient>,
+        data: &Post,
+    ) -> Result<Post, AppError> {
+        //	TODO: check if the user trying to update is the author
+        let repo = post_repository::PostRepository::new(prisma);
+        match repo.update_post(data).await {
+            Ok(data) => {
+                if let Some(data) = data {
+                    return Ok(Post::from(data));
+                }
+                return Err(AppError::BadRequest(
+                    "Record required but not found".to_string(),
+                ));
+            }
+            Err(err) => match err {
+                prisma_client_rust::Error::Execute(err) => return Err(get_error(&err)),
+                _ => return Err(AppError::Unknown),
+            },
+        }
+    }
 }

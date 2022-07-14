@@ -77,10 +77,11 @@ pub struct User {
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
 }
 
-#[derive(Object)]
+#[derive(Object, Clone)]
 pub struct Post {
     pub id: i32,
     pub title: String,
+    pub content: String,
     pub published: bool,
     pub author_id: i32,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
@@ -92,6 +93,7 @@ impl From<crate::prisma::post::Data> for Post {
         Post {
             id: data.id,
             title: data.title,
+            content: data.content,
             published: data.published,
             author_id: data.author_id,
             created_at: data.created_at,

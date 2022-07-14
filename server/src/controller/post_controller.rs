@@ -21,6 +21,12 @@ enum DeletePostResponse {
     Deleted,
 }
 
+#[derive(ApiResponse)]
+enum PublishPostResponse {
+    #[oai(status = 200)]
+    Ok,
+}
+
 #[OpenApi(prefix_path = "/post")]
 impl PostController {
     #[oai(path = "/", method = "post")]
@@ -61,6 +67,23 @@ impl PostController {
         crate::service::PostService::delete_post(data.prisma.to_owned(), &id)
             .await
             .map(|_| DeletePostResponse::Deleted)
+            .map_err(ResponseError::from)
+    }
+
+    #[oai(path = "/:id", method = "put")]
+    async fn update(
+        &self,
+        data: Data<&Context>,
+        _auth: JWTAuthorization,
+        req: &Request,
+        mut body: Json<Post>,
+    ) -> Result<PublishPostResponse, ResponseError> {
+        body.id = req
+            .path_params::<i32>()
+            .expect("error on /post/:id publish");
+        crate::service::PostService::update_post(data.prisma.to_owned(), &body)
+            .await
+            .map(|_| PublishPostResponse::Ok)
             .map_err(ResponseError::from)
     }
 }
