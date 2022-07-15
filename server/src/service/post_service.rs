@@ -25,7 +25,9 @@ impl PostService {
         user_id: &i32,
     ) -> Result<Post, AppError> {
         let repo = post_repository::PostRepository::new(prisma);
-        let res = repo.create_post(data, user_id).await;
+        let res = repo
+            .create_post(data, user_id, &slug::slugify(data.title.clone()))
+            .await;
         if let Ok(data) = res {
             return Ok(Post::from(data));
         }

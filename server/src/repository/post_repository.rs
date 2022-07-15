@@ -15,6 +15,7 @@ impl PostRepository {
         &self,
         data: &CreatePostPayload,
         user_id: &i32,
+        slug: &str,
     ) -> Result<post::Data, prisma_client_rust::Error> {
         let mut _params: Vec<post::SetParam> =
             vec![post::published::set(data.published.unwrap_or(false))];
@@ -28,6 +29,7 @@ impl PostRepository {
             .post()
             .create(
                 post::title::set(data.title.clone()),
+                post::slug::set(slug.to_string()),
                 post::content::set(data.content.clone()),
                 post::author::link(user::id::equals(*user_id)),
                 _params,

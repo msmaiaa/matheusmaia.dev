@@ -19,7 +19,7 @@ pub use prisma_client_rust::{queries::Error as QueryError, NewClientError};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
-static DATAMODEL_STR : & 'static str = "datasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"cargo prisma\"\n  output   = \"../src/prisma.rs\"\n}\n\nmodel User {\n  id       Int     @id @default(autoincrement())\n  username String\n  password String\n  admin    Boolean\n  posts    Post[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @default(now())\n}\n\nmodel Post {\n  id        Int     @id @default(autoincrement())\n  title     String  @unique\n  content   String  @db.MediumText\n  published Boolean @default(false)\n\n  author   User @relation(fields: [authorId], references: [id])\n  authorId Int\n\n  tags Tag[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Tag {\n  id        Int    @id @default(autoincrement())\n  name      String @unique\n  TagOnPost Post[]\n}\n" ;
+static DATAMODEL_STR : & 'static str = "datasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"cargo prisma\"\n  output   = \"../src/prisma.rs\"\n}\n\nmodel User {\n  id       Int     @id @default(autoincrement())\n  username String\n  password String\n  admin    Boolean\n  posts    Post[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @default(now())\n}\n\nmodel Post {\n  id        Int     @id @default(autoincrement())\n  title     String  @unique\n  slug      String  @unique\n  content   String  @db.MediumText\n  published Boolean @default(false)\n\n  author   User @relation(fields: [authorId], references: [id])\n  authorId Int\n\n  tags Tag[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Tag {\n  id        Int    @id @default(autoincrement())\n  name      String @unique\n  TagOnPost Post[]\n}\n" ;
 static DATABASE_STR: &'static str = "mysql";
 pub async fn new_client() -> Result<_prisma::PrismaClient, NewClientError> {
     let config = parse_configuration(DATAMODEL_STR)?.subject;
@@ -1281,6 +1281,59 @@ pub mod post {
             }
         }
     }
+    pub mod slug {
+        use super::super::*;
+        use super::_prisma::*;
+        use super::{Cursor, OrderByParam, SetParam, UniqueWhereParam, WhereParam, WithParam};
+        pub fn set<T: From<Set>>(value: String) -> T {
+            Set(value).into()
+        }
+        pub fn equals<T: From<UniqueWhereParam>>(value: String) -> T {
+            UniqueWhereParam::SlugEquals(value).into()
+        }
+        pub fn order(direction: Direction) -> OrderByParam {
+            OrderByParam::Slug(direction)
+        }
+        pub fn cursor(cursor: String) -> Cursor {
+            Cursor::Slug(cursor)
+        }
+        pub fn in_vec(value: Vec<String>) -> WhereParam {
+            WhereParam::SlugInVec(value)
+        }
+        pub fn not_in_vec(value: Vec<String>) -> WhereParam {
+            WhereParam::SlugNotInVec(value)
+        }
+        pub fn lt(value: String) -> WhereParam {
+            WhereParam::SlugLt(value)
+        }
+        pub fn lte(value: String) -> WhereParam {
+            WhereParam::SlugLte(value)
+        }
+        pub fn gt(value: String) -> WhereParam {
+            WhereParam::SlugGt(value)
+        }
+        pub fn gte(value: String) -> WhereParam {
+            WhereParam::SlugGte(value)
+        }
+        pub fn contains(value: String) -> WhereParam {
+            WhereParam::SlugContains(value)
+        }
+        pub fn starts_with(value: String) -> WhereParam {
+            WhereParam::SlugStartsWith(value)
+        }
+        pub fn ends_with(value: String) -> WhereParam {
+            WhereParam::SlugEndsWith(value)
+        }
+        pub fn not(value: String) -> WhereParam {
+            WhereParam::SlugNot(value)
+        }
+        pub struct Set(String);
+        impl From<Set> for SetParam {
+            fn from(value: Set) -> Self {
+                Self::SetSlug(value.0)
+            }
+        }
+    }
     pub mod content {
         use super::super::*;
         use super::_prisma::*;
@@ -1590,6 +1643,7 @@ pub mod post {
         [
             "id",
             "title",
+            "slug",
             "content",
             "published",
             "authorId",
@@ -1609,6 +1663,8 @@ pub mod post {
         pub id: i32,
         #[serde(rename = "title")]
         pub title: String,
+        #[serde(rename = "slug")]
+        pub slug: String,
         #[serde(rename = "content")]
         pub content: String,
         #[serde(rename = "published")]
@@ -1672,6 +1728,7 @@ pub mod post {
         MultiplyId(i32),
         DivideId(i32),
         SetTitle(String),
+        SetSlug(String),
         SetContent(String),
         SetPublished(bool),
         LinkAuthor(super::user::UniqueWhereParam),
@@ -1718,6 +1775,7 @@ pub mod post {
                     )]),
                 ),
                 SetParam::SetTitle(value) => ("title".to_string(), PrismaValue::String(value)),
+                SetParam::SetSlug(value) => ("slug".to_string(), PrismaValue::String(value)),
                 SetParam::SetContent(value) => ("content".to_string(), PrismaValue::String(value)),
                 SetParam::SetPublished(value) => {
                     ("published".to_string(), PrismaValue::Boolean(value))
@@ -1801,6 +1859,7 @@ pub mod post {
     pub enum OrderByParam {
         Id(Direction),
         Title(Direction),
+        Slug(Direction),
         Content(Direction),
         Published(Direction),
         AuthorId(Direction),
@@ -1815,6 +1874,10 @@ pub mod post {
                 }
                 Self::Title(direction) => (
                     "title".to_string(),
+                    PrismaValue::String(direction.to_string()),
+                ),
+                Self::Slug(direction) => (
+                    "slug".to_string(),
                     PrismaValue::String(direction.to_string()),
                 ),
                 Self::Content(direction) => (
@@ -1844,12 +1907,14 @@ pub mod post {
     pub enum Cursor {
         Id(i32),
         Title(String),
+        Slug(String),
     }
     impl Into<(String, PrismaValue)> for Cursor {
         fn into(self) -> (String, PrismaValue) {
             match self {
                 Self::Id(cursor) => ("id".to_string(), PrismaValue::Int(cursor as i64)),
                 Self::Title(cursor) => ("title".to_string(), PrismaValue::String(cursor)),
+                Self::Slug(cursor) => ("slug".to_string(), PrismaValue::String(cursor)),
             }
         }
     }
@@ -1877,6 +1942,17 @@ pub mod post {
         TitleStartsWith(String),
         TitleEndsWith(String),
         TitleNot(String),
+        SlugEquals(String),
+        SlugInVec(Vec<String>),
+        SlugNotInVec(Vec<String>),
+        SlugLt(String),
+        SlugLte(String),
+        SlugGt(String),
+        SlugGte(String),
+        SlugContains(String),
+        SlugStartsWith(String),
+        SlugEndsWith(String),
+        SlugNot(String),
         ContentEquals(String),
         ContentInVec(Vec<String>),
         ContentNotInVec(Vec<String>),
@@ -2091,6 +2167,87 @@ pub mod post {
                 ),
                 Self::TitleNot(value) => (
                     "title".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "not".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugEquals(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "equals".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugInVec(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "in".to_string(),
+                        PrismaValue::List(
+                            value.into_iter().map(|v| PrismaValue::String(v)).collect(),
+                        ),
+                    )]),
+                ),
+                Self::SlugNotInVec(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "notIn".to_string(),
+                        PrismaValue::List(
+                            value.into_iter().map(|v| PrismaValue::String(v)).collect(),
+                        ),
+                    )]),
+                ),
+                Self::SlugLt(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "lt".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugLte(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "lte".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugGt(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "gt".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugGte(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "gte".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugContains(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "contains".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugStartsWith(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "startsWith".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugEndsWith(value) => (
+                    "slug".to_string(),
+                    SerializedWhereValue::Object(vec![(
+                        "endsWith".to_string(),
+                        PrismaValue::String(value),
+                    )]),
+                ),
+                Self::SlugNot(value) => (
+                    "slug".to_string(),
                     SerializedWhereValue::Object(vec![(
                         "not".to_string(),
                         PrismaValue::String(value),
@@ -2433,12 +2590,14 @@ pub mod post {
     #[derive(Clone)]
     pub enum UniqueWhereParam {
         TitleEquals(String),
+        SlugEquals(String),
         IdEquals(i32),
     }
     impl From<UniqueWhereParam> for WhereParam {
         fn from(value: UniqueWhereParam) -> Self {
             match value {
                 UniqueWhereParam::TitleEquals(value) => Self::TitleEquals(value),
+                UniqueWhereParam::SlugEquals(value) => Self::SlugEquals(value),
                 UniqueWhereParam::IdEquals(value) => Self::IdEquals(value),
             }
         }
@@ -2480,11 +2639,13 @@ pub mod post {
         pub fn create(
             self,
             title: title::Set,
+            slug: slug::Set,
             content: content::Set,
             author: author::Link,
             mut _params: Vec<SetParam>,
         ) -> Create<'a> {
             _params.push(title.into());
+            _params.push(slug.into());
             _params.push(content.into());
             _params.push(author.into());
             Create::new(
@@ -2517,11 +2678,18 @@ pub mod post {
         pub fn upsert(
             self,
             _where: UniqueWhereParam,
-            _create: (title::Set, content::Set, author::Link, Vec<SetParam>),
+            _create: (
+                title::Set,
+                slug::Set,
+                content::Set,
+                author::Link,
+                Vec<SetParam>,
+            ),
             _update: Vec<SetParam>,
         ) -> Upsert<'a> {
-            let (title, content, author, mut _params) = _create;
+            let (title, slug, content, author, mut _params) = _create;
             _params.push(title.into());
+            _params.push(slug.into());
             _params.push(content.into());
             _params.push(author.into());
             Upsert::new(
@@ -3280,6 +3448,8 @@ pub mod _prisma {
         Id,
         #[serde(rename = "title")]
         Title,
+        #[serde(rename = "slug")]
+        Slug,
         #[serde(rename = "content")]
         Content,
         #[serde(rename = "published")]
@@ -3296,6 +3466,7 @@ pub mod _prisma {
             match self {
                 Self::Id => "id".to_string(),
                 Self::Title => "title".to_string(),
+                Self::Slug => "slug".to_string(),
                 Self::Content => "content".to_string(),
                 Self::Published => "published".to_string(),
                 Self::AuthorId => "authorId".to_string(),

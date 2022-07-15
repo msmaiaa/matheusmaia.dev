@@ -81,6 +81,7 @@ pub struct User {
 pub struct Post {
     pub id: i32,
     pub title: String,
+    pub slug: String,
     pub content: String,
     pub published: bool,
     pub author_id: i32,
@@ -93,6 +94,7 @@ impl From<crate::prisma::post::Data> for Post {
         Post {
             id: data.id,
             title: data.title,
+            slug: data.slug,
             content: data.content,
             published: data.published,
             author_id: data.author_id,
