@@ -1,5 +1,5 @@
 use crate::{
-    common_types::CreatePostPayload,
+    common_types::{CreatePostPayload, Post},
     prisma::{post, tag, user, PrismaClient},
 };
 
@@ -32,6 +32,35 @@ impl PostRepository {
                 post::author::link(user::id::equals(*user_id)),
                 _params,
             )
+            .exec()
+            .await
+    }
+
+    pub async fn update_post(
+        &self,
+        data: &Post,
+    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
+        //	update the post
+        let _data = data.clone();
+        self.client
+            .post()
+            .find_unique(post::id::equals(data.id))
+            .update(vec![
+                post::published::set(_data.published),
+                post::title::set(_data.title),
+                post::content::set(_data.content),
+            ])
+            .exec()
+            .await
+    }
+    pub async fn delete_post(
+        &self,
+        id: &i32,
+    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
+        self.client
+            .post()
+            .find_unique(post::id::equals(*id))
+            .delete()
             .exec()
             .await
     }
