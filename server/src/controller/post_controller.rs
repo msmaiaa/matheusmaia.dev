@@ -2,7 +2,7 @@ use poem::{web::Data, Request};
 use poem_openapi::{payload::Json, ApiResponse, OpenApi};
 
 use crate::{
-    common_types::{CreatePostPayload, ErrorMessage, Post, ResponseError},
+    common_types::{CreatePostPayload, ErrorMessage, Pageable, Post, PostFilters, ResponseError},
     config::context::Context,
     jwt::JWTAuthorization,
 };
@@ -19,6 +19,12 @@ enum CreatePostResponse {
 enum DeletePostResponse {
     #[oai(status = 204)]
     Deleted,
+}
+
+#[derive(ApiResponse)]
+enum GetPostsResponse {
+    #[oai(status = 200)]
+    Ok(Json<Vec<Post>>),
 }
 
 #[derive(ApiResponse)]
@@ -84,6 +90,20 @@ impl PostController {
         crate::service::PostService::update_post(data.prisma.to_owned(), &body)
             .await
             .map(|_| PublishPostResponse::Ok)
+            .map_err(ResponseError::from)
+    }
+
+    #[oai(path = "/", method = "get")]
+    async fn find_many(
+        &self,
+        data: Data<&Context>,
+        req: &Request,
+    ) -> Result<GetPostsResponse, ResponseError> {
+        let name = req.params::<PostFilters>().unwrap_or_default();
+        let filters = req.params::<Pageable>().unwrap_or_default();
+        crate::service::PostService::find_many(data.prisma.to_owned(), &name, &filters)
+            .await
+            .map(|posts| GetPostsResponse::Ok(Json(posts)))
             .map_err(ResponseError::from)
     }
 }

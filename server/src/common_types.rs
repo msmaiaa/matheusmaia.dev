@@ -113,6 +113,11 @@ pub struct TagFilters {
     pub name: Option<String>,
 }
 
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct PostFilters {
+    pub title: Option<String>,
+}
+
 #[derive(serde::Deserialize, Object)]
 pub struct CreatePostPayload {
     pub title: String,

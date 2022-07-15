@@ -1,4 +1,4 @@
-use crate::common_types::{AppError, Post};
+use crate::common_types::{AppError, Pageable, Post, PostFilters};
 use crate::{common_types::CreatePostPayload, prisma::PrismaClient};
 use prisma_client_rust::prisma_errors::{query_engine::*, UserFacingError};
 
@@ -79,5 +79,20 @@ impl PostService {
                 _ => return Err(AppError::Unknown),
             },
         }
+    }
+
+    pub async fn find_many(
+        prisma: std::sync::Arc<PrismaClient>,
+        query: &PostFilters,
+        pagination: &Pageable,
+    ) -> Result<Vec<Post>, AppError> {
+        let repo = post_repository::PostRepository::new(prisma);
+        repo.find_many(pagination, query)
+            .await
+            .map(|vec| vec.into_iter().map(Post::from).collect())
+            .map_err(|err| {
+                println!("error on user find_many service: {:?}", err);
+                AppError::Unknown
+            })
     }
 }

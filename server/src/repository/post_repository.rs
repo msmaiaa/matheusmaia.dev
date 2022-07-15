@@ -1,5 +1,5 @@
 use crate::{
-    common_types::{CreatePostPayload, Post},
+    common_types::{CreatePostPayload, Pageable, Post, PostFilters},
     prisma::{post, tag, user, PrismaClient},
 };
 
@@ -53,6 +53,7 @@ impl PostRepository {
             .exec()
             .await
     }
+
     pub async fn delete_post(
         &self,
         id: &i32,
@@ -63,5 +64,25 @@ impl PostRepository {
             .delete()
             .exec()
             .await
+    }
+
+    pub async fn find_many(
+        &self,
+        pagination: &Pageable,
+        filters: &PostFilters,
+    ) -> Result<Vec<post::Data>, prisma_client_rust::Error> {
+        let mut query = self
+            .client
+            .post()
+            .find_many(vec![crate::prisma::post::title::contains(
+                filters.title.as_deref().unwrap_or("").to_string(),
+            )]);
+        if let Some(skip) = pagination.skip {
+            query = query.skip(skip);
+        }
+        if let Some(take) = pagination.take {
+            query = query.take(take);
+        }
+        query.exec().await
     }
 }
