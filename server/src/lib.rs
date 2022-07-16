@@ -1,18 +1,17 @@
-use config::context::Context;
+use config::Context;
 use controller::{AuthController, PostController, TagController};
+//use controller::{AuthController, PostController, TagController};
 use poem::{
     middleware::{AddDataEndpoint, Cors, CorsEndpoint},
     EndpointExt, Route,
 };
 use poem_openapi::OpenApiService;
-use std::sync::Arc;
 
 mod common_types;
 mod config;
 mod controller;
-mod db;
+mod database;
 mod jwt;
-mod prisma;
 mod repository;
 mod service;
 
@@ -28,10 +27,14 @@ impl App {
     }
 
     pub async fn make_server(self) -> AppServer {
-        let prisma_client = db::get_client().await.expect("Failed to get prisma client");
-        let ctx = config::context::Context::new(Arc::new(prisma_client));
+        let db_pool = database::start_db(
+            &100,
+            &std::env::var("DATABASE_URL").expect("DATABASE_URL not set"),
+        )
+        .await;
+        let ctx = config::Context::new(db_pool);
         let api_service = OpenApiService::new(
-            (AuthController, TagController, PostController),
+            (AuthController, PostController, TagController),
             "Api",
             "1.0",
         )
@@ -41,7 +44,6 @@ impl App {
             .nest("/api", api_service)
             .nest("/", ui)
             .with(Cors::new())
-            //.with(Tracing)
             .data(ctx);
         app
     }
