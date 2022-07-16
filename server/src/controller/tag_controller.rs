@@ -1,13 +1,10 @@
 pub struct TagController;
-use poem::{
-    web::{Data, Path},
-    Request,
-};
+use poem::{web::Data, Request};
 use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
 
 use crate::{
     common_types::{Pageable, ResponseError, Tag, TagFilters},
-    config::context::Context,
+    config::Context,
 };
 
 #[derive(Object)]
@@ -42,7 +39,7 @@ impl TagController {
         _auth: crate::jwt::JWTAuthorization,
         body: Json<CreateTagPayload>,
     ) -> Result<CreateTagResponse, ResponseError> {
-        crate::service::TagService::create_tag(data.prisma.to_owned(), &body.0.name)
+        crate::service::TagService::create_tag(&data, &body.0.name)
             .await
             .map(|_| CreateTagResponse::Ok)
             .map_err(|e| e.into())
@@ -55,7 +52,7 @@ impl TagController {
     ) -> Result<FindTagsResponse, ResponseError> {
         let filters = req.params::<Pageable>().unwrap_or_default();
         let other_params = req.params::<TagFilters>().unwrap_or_default();
-        crate::service::TagService::find_many(data.prisma.to_owned(), filters, other_params)
+        crate::service::TagService::find_many(&data, filters, other_params)
             .await
             .map(|tags| FindTagsResponse::Ok(Json(tags)))
             .map_err(|e| e.into())
@@ -67,9 +64,9 @@ impl TagController {
         req: &Request,
         data: Data<&Context>,
     ) -> Result<DeleteTagResponse, ResponseError> {
-        let id = req.path_params::<i32>().expect("Error on path params");
+        let id = req.path_params::<u64>().expect("Error on path params");
 
-        crate::service::TagService::delete(data.prisma.to_owned(), &id)
+        crate::service::TagService::delete(&data, &id)
             .await
             .map(|_| DeleteTagResponse::Ok)
             .map_err(|e| e.into())

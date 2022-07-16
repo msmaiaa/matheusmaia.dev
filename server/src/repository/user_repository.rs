@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use sqlx::mysql::MySqlQueryResult;
-
 use crate::{common_types::User, database::DbPool};
 pub struct UserRepository {
     db_client: Arc<DbPool>,

@@ -3,7 +3,7 @@ use poem_openapi::{payload::Json, ApiResponse, OpenApi};
 
 use crate::{
     common_types::{CreatePostPayload, ErrorMessage, Pageable, Post, PostFilters, ResponseError},
-    config::context::Context,
+    config::Context,
     jwt::JWTAuthorization,
 };
 
