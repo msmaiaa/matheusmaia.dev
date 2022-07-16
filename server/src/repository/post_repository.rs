@@ -1,70 +1,70 @@
+use sqlx::mysql::MySqlQueryResult;
+
 use crate::{
     common_types::{CreatePostPayload, Pageable, Post, PostFilters},
-    prisma::{post, tag, user, PrismaClient},
+    database::DbPool,
 };
+use std::sync::Arc;
 
 pub struct PostRepository {
-    client: std::sync::Arc<PrismaClient>,
+    db_pool: Arc<DbPool>,
 }
 
 impl PostRepository {
-    pub fn new(client: std::sync::Arc<PrismaClient>) -> Self {
-        PostRepository { client }
+    pub fn new(db_pool: Arc<DbPool>) -> Self {
+        PostRepository { db_pool }
     }
     pub async fn create_post(
         &self,
         data: &CreatePostPayload,
-        user_id: &i32,
+        user_id: &u32,
         slug: &str,
-    ) -> Result<post::Data, prisma_client_rust::Error> {
-        let mut _params: Vec<post::SetParam> =
-            vec![post::published::set(data.published.unwrap_or(false))];
-        if let Some(tags) = &data.tags {
-            _params.push(post::tags::link(
-                tags.into_iter().map(|tag| tag::id::equals(*tag)).collect(),
-            ))
-        }
-
-        self.client
-            .post()
-            .create(
-                post::title::set(data.title.clone()),
-                post::slug::set(slug.to_string()),
-                post::content::set(data.content.clone()),
-                post::author::link(user::id::equals(*user_id)),
-                _params,
-            )
-            .exec()
-            .await
+    ) -> Result<MySqlQueryResult, sqlx::Error> {
+        // let mut _params: Vec<post::SetParam> =
+        //     vec![post::published::set(data.published.unwrap_or(false))];
+        // if let Some(tags) = &data.tags {
+        //     _params.push(post::tags::link(
+        //         tags.into_iter().map(|tag| tag::id::equals(*tag)).collect(),
+        //     ))
+        // }
+        sqlx::query!(
+            "INSERT INTO Post (
+					content,
+					title,
+					slug,
+					published,
+					authorId
+				) VALUES (?, ?, ?, ?, ?)",
+            data.content,
+            data.title,
+            slug,
+            data.published,
+            user_id
+        )
+        .execute(&*self.db_pool)
+        .await
     }
 
     pub async fn update_post(
         &self,
         data: &Post,
-    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
-        //	update the post
-        let _data = data.clone();
-        self.client
-            .post()
-            .find_unique(post::id::equals(data.id))
-            .update(vec![
-                post::published::set(_data.published),
-                post::title::set(_data.title),
-                post::content::set(_data.content),
-            ])
-            .exec()
-            .await
+        user_id: &u32,
+    ) -> Result<MySqlQueryResult, sqlx::Error> {
+        sqlx::query!(
+            "UPDATE Post SET content=?, title=?, slug=?, published=? WHERE authorId=?",
+            data.content,
+            data.title,
+            data.slug,
+            data.published,
+            user_id
+        )
+        .execute(&*self.db_pool)
+        .await
     }
 
-    pub async fn delete_post(
-        &self,
-        id: &i32,
-    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
-        self.client
-            .post()
-            .find_unique(post::id::equals(*id))
-            .delete()
-            .exec()
+    pub async fn delete_post(&self, id: &u32) -> Result<MySqlQueryResult, sqlx::Error> {
+        sqlx::query!("DELETE FROM Post WHERE id=?", id)
+            .execute(&*self.db_pool)
             .await
     }
 
@@ -72,19 +72,15 @@ impl PostRepository {
         &self,
         pagination: &Pageable,
         filters: &PostFilters,
-    ) -> Result<Vec<post::Data>, prisma_client_rust::Error> {
-        let mut query = self
-            .client
-            .post()
-            .find_many(vec![crate::prisma::post::title::contains(
-                filters.title.as_deref().unwrap_or("").to_string(),
-            )]);
-        if let Some(skip) = pagination.skip {
-            query = query.skip(skip);
-        }
-        if let Some(take) = pagination.take {
-            query = query.take(take);
-        }
-        query.exec().await
+    ) -> Result<Vec<Post>, sqlx::Error> {
+        sqlx::query_as!(Post, "SELECT * FROM Post")
+            .fetch_all(&*self.db_pool)
+            .await
+        // if let Some(skip) = pagination.skip {
+        //     query = query.skip(skip);
+        // }
+        // if let Some(take) = pagination.take {
+        //     query = query.take(take);
+        // }
     }
 }

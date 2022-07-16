@@ -1,5 +1,5 @@
 use config::Context;
-use controller::{AuthController, TagController};
+use controller::{AuthController, PostController, TagController};
 //use controller::{AuthController, PostController, TagController};
 use poem::{
     middleware::{AddDataEndpoint, Cors, CorsEndpoint},
@@ -33,8 +33,12 @@ impl App {
         )
         .await;
         let ctx = config::Context::new(db_pool);
-        let api_service = OpenApiService::new((AuthController, TagController), "Api", "1.0")
-            .server(format!("http://{}:{}/api", self.host, self.port));
+        let api_service = OpenApiService::new(
+            (AuthController, TagController, PostController),
+            "Api",
+            "1.0",
+        )
+        .server(format!("http://{}:{}/api", self.host, self.port));
         let ui = api_service.swagger_ui();
         let app = Route::new()
             .nest("/api", api_service)

@@ -1,5 +1,7 @@
-use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use chrono::Utc;
+
 use poem_openapi::{payload::Json, ApiResponse, Object};
+use serde::{self, Deserialize};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TokenData {
@@ -53,7 +55,7 @@ impl From<AppError> for ResponseError {
 
 #[derive(Object)]
 pub struct Tag {
-    pub id: i32,
+    pub id: u32,
     pub name: String,
 }
 
@@ -63,20 +65,20 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub admin: i8,
-    pub createdAt: NaiveDateTime,
-    pub updatedAt: NaiveDateTime,
+    pub createdAt: chrono::DateTime<Utc>,
+    pub updatedAt: chrono::DateTime<Utc>,
 }
 
-#[derive(Object, Clone)]
+#[derive(Object, Clone, Deserialize)]
 pub struct Post {
-    pub id: i32,
+    pub id: u32,
     pub title: String,
     pub slug: String,
     pub content: String,
-    pub published: bool,
-    pub author_id: i32,
-    pub createdAt: DateTime<FixedOffset>,
-    pub updatedAt: DateTime<FixedOffset>,
+    pub published: i8,
+    pub authorId: u32,
+    pub createdAt: chrono::DateTime<Utc>,
+    pub updatedAt: chrono::DateTime<Utc>,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -100,5 +102,5 @@ pub struct CreatePostPayload {
     pub title: String,
     pub content: String,
     pub published: Option<bool>,
-    pub tags: Option<Vec<i32>>,
+    pub tags: Option<Vec<u64>>,
 }

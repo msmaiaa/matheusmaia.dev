@@ -12,7 +12,7 @@ pub struct PostController;
 #[derive(ApiResponse)]
 enum CreatePostResponse {
     #[oai(status = 201)]
-    Created(Json<Post>),
+    Created,
 }
 
 #[derive(ApiResponse)]
@@ -55,9 +55,9 @@ impl PostController {
                 )));
             }
         }
-        crate::service::PostService::create_post(data.prisma.to_owned(), &body, &auth.0.id)
+        crate::service::PostService::create_post(&data, &body, &auth.0.id)
             .await
-            .map(|post| CreatePostResponse::Created(Json(post)))
+            .map(|post| CreatePostResponse::Created)
             .map_err(|e| e.into())
     }
 
@@ -69,8 +69,8 @@ impl PostController {
         req: &Request,
     ) -> Result<DeletePostResponse, ResponseError> {
         //	TODO: dont use fucking expect lol
-        let id = req.path_params::<i32>().expect("error on /post/:id delete");
-        crate::service::PostService::delete_post(data.prisma.to_owned(), &id)
+        let id = req.path_params::<u32>().expect("error on /post/:id delete");
+        crate::service::PostService::delete_post(&data, &id)
             .await
             .map(|_| DeletePostResponse::Deleted)
             .map_err(ResponseError::from)
@@ -85,9 +85,9 @@ impl PostController {
         mut body: Json<Post>,
     ) -> Result<PublishPostResponse, ResponseError> {
         body.id = req
-            .path_params::<i32>()
+            .path_params::<u32>()
             .expect("error on /post/:id publish");
-        crate::service::PostService::update_post(data.prisma.to_owned(), &body)
+        crate::service::PostService::update_post(&data, &body, &_auth.0.id)
             .await
             .map(|_| PublishPostResponse::Ok)
             .map_err(ResponseError::from)
@@ -101,7 +101,7 @@ impl PostController {
     ) -> Result<GetPostsResponse, ResponseError> {
         let name = req.params::<PostFilters>().unwrap_or_default();
         let filters = req.params::<Pageable>().unwrap_or_default();
-        crate::service::PostService::find_many(data.prisma.to_owned(), &name, &filters)
+        crate::service::PostService::find_many(&data, &name, &filters)
             .await
             .map(|posts| GetPostsResponse::Ok(Json(posts)))
             .map_err(ResponseError::from)
