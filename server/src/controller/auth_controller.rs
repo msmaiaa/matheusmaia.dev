@@ -1,6 +1,5 @@
 use crate::{
-    common_types::ResponseError, config::context::Context, jwt::JWTAuthorization,
-    service::AuthService,
+    common_types::ResponseError, config::Context, jwt::JWTAuthorization, service::AuthService,
 };
 use poem::web::Data;
 use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
@@ -44,19 +43,15 @@ impl AuthController {
         data: Data<&Context>,
         credentials: Json<LoginRequest>,
     ) -> Result<LoginResponse, ResponseError> {
-        AuthService::login(
-            data.prisma.to_owned(),
-            &credentials.0.username,
-            &credentials.0.password,
-        )
-        .await
-        .map(|token| {
-            LoginResponse::Ok(Json(LoginResponsePayload {
-                token: token,
-                username: credentials.0.username,
-            }))
-        })
-        .ok_or(ResponseError::Unauthorized)
+        AuthService::login(&data, &credentials.0.username, &credentials.0.password)
+            .await
+            .map(|token| {
+                LoginResponse::Ok(Json(LoginResponsePayload {
+                    token: token,
+                    username: credentials.0.username,
+                }))
+            })
+            .ok_or(ResponseError::Unauthorized)
     }
 
     #[oai(path = "/me", method = "get")]

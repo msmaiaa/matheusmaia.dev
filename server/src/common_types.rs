@@ -1,9 +1,9 @@
+use chrono::{DateTime, FixedOffset, NaiveDateTime};
 use poem_openapi::{payload::Json, ApiResponse, Object};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TokenData {
-    pub username: String,
-    pub id: i32,
+    pub id: u32,
     pub iat: i64,
     pub exp: i64,
 }
@@ -57,24 +57,14 @@ pub struct Tag {
     pub name: String,
 }
 
-impl From<crate::prisma::tag::Data> for Tag {
-    fn from(data: crate::prisma::tag::Data) -> Self {
-        Tag {
-            id: data.id,
-            name: data.name,
-        }
-    }
-}
-
 #[derive(Object)]
 pub struct User {
-    pub id: i32,
+    pub id: u32,
     pub username: String,
     pub password: String,
-    pub admin: bool,
-    pub posts: Option<Vec<Post>>,
-    pub created_at: chrono::DateTime<chrono::FixedOffset>,
-    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+    pub admin: i8,
+    pub createdAt: NaiveDateTime,
+    pub updatedAt: NaiveDateTime,
 }
 
 #[derive(Object, Clone)]
@@ -85,23 +75,8 @@ pub struct Post {
     pub content: String,
     pub published: bool,
     pub author_id: i32,
-    pub created_at: chrono::DateTime<chrono::FixedOffset>,
-    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
-}
-
-impl From<crate::prisma::post::Data> for Post {
-    fn from(data: crate::prisma::post::Data) -> Self {
-        Post {
-            id: data.id,
-            title: data.title,
-            slug: data.slug,
-            content: data.content,
-            published: data.published,
-            author_id: data.author_id,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
-        }
-    }
+    pub createdAt: DateTime<FixedOffset>,
+    pub updatedAt: DateTime<FixedOffset>,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]

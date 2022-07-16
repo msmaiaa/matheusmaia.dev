@@ -1,5 +1,6 @@
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 
+pub type DbPool = Pool<MySql>;
 pub async fn start_db(max_connections: &u32, connection_uri: &str) -> Pool<MySql> {
     println!("{}", connection_uri.clone());
     MySqlPoolOptions::new()
