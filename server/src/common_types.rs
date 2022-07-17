@@ -69,7 +69,7 @@ pub struct User {
     pub updatedAt: chrono::DateTime<Utc>,
 }
 
-#[derive(Object, Clone, Deserialize)]
+#[derive(Object, Clone, Deserialize, sqlx::FromRow)]
 pub struct Post {
     pub id: u32,
     pub title: String,

@@ -57,7 +57,7 @@ impl PostController {
         }
         crate::service::PostService::create_post(&data, &body, &auth.0.id)
             .await
-            .map(|post| CreatePostResponse::Created)
+            .map(|_| CreatePostResponse::Created)
             .map_err(|e| e.into())
     }
 

@@ -1,7 +1,6 @@
 use crate::common_types::CreatePostPayload;
 use crate::common_types::{AppError, Pageable, Post, PostFilters};
 use crate::config::Context;
-use std::sync::Arc;
 
 pub struct PostService;
 use crate::repository::post_repository;
