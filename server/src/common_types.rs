@@ -3,13 +3,6 @@ use chrono::Utc;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{self, Deserialize};
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct TokenData {
-    pub id: u32,
-    pub iat: i64,
-    pub exp: i64,
-}
-
 #[derive(Object)]
 pub struct ErrorMessage {
     pub message: String,
@@ -59,6 +52,11 @@ pub struct Tag {
     pub name: String,
 }
 
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct TagFilters {
+    pub name: Option<String>,
+}
+
 #[derive(Object)]
 pub struct User {
     pub id: u32,
@@ -82,25 +80,12 @@ pub struct Post {
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
-pub struct Pageable {
-    pub skip: Option<i64>,
-    pub take: Option<i64>,
-}
-
-#[derive(serde::Deserialize, Debug, Default)]
-pub struct TagFilters {
-    pub name: Option<String>,
-}
-
-#[derive(serde::Deserialize, Debug, Default)]
 pub struct PostFilters {
     pub title: Option<String>,
 }
 
-#[derive(serde::Deserialize, Object)]
-pub struct CreatePostPayload {
-    pub title: String,
-    pub content: String,
-    pub published: Option<bool>,
-    pub tags: Option<Vec<u64>>,
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct Pageable {
+    pub skip: Option<i64>,
+    pub take: Option<i64>,
 }

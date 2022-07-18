@@ -11,6 +11,7 @@ mod common_types;
 mod config;
 mod controller;
 mod database;
+mod dto;
 mod jwt;
 mod repository;
 mod service;

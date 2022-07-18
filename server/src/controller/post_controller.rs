@@ -2,8 +2,9 @@ use poem::{web::Data, Request};
 use poem_openapi::{payload::Json, ApiResponse, OpenApi};
 
 use crate::{
-    common_types::{CreatePostPayload, ErrorMessage, Pageable, Post, PostFilters, ResponseError},
+    common_types::{ErrorMessage, Pageable, Post, PostFilters, ResponseError},
     config::Context,
+    dto::CreatePostPayload,
     jwt::JWTAuthorization,
 };
 
@@ -42,19 +43,19 @@ impl PostController {
         auth: JWTAuthorization,
         body: Json<CreatePostPayload>,
     ) -> Result<CreatePostResponse, ResponseError> {
-        //	TODO: handle empty array of tags
         if body.0.title.is_empty() || body.0.content.is_empty() {
             return Err(ResponseError::BadRequest(ErrorMessage::as_json(
                 "Title and content are required".to_string(),
             )));
         }
-        if let Some(tags) = &body.0.tags {
-            if tags.is_empty() {
+        if let Some(_tags) = &body.tags {
+            if _tags.is_empty() {
                 return Err(ResponseError::BadRequest(ErrorMessage::as_json(
                     "You must have atleast one tag in the array of tags".to_string(),
                 )));
             }
         }
+
         crate::service::PostService::create_post(&data, &body, &auth.0.id)
             .await
             .map(|_| CreatePostResponse::Created)

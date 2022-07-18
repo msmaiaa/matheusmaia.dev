@@ -1,8 +1,8 @@
-use crate::common_types::CreatePostPayload;
 use crate::common_types::{AppError, Pageable, Post, PostFilters};
 use crate::config::Context;
 
 pub struct PostService;
+use crate::dto::CreatePostPayload;
 use crate::repository::post_repository;
 impl PostService {
     pub async fn create_post(
@@ -11,13 +11,24 @@ impl PostService {
         user_id: &u32,
     ) -> Result<(), AppError> {
         let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
-        repo.create_post(data, user_id, &slug::slugify(data.title.clone()))
-            .await
-            .map(|_| ())
-            .map_err(|err| {
-                println!("Error on post_repo/create_post {:?}", err.to_string());
-                AppError::Unknown
-            })
+
+        if let Some(tags) = &data.tags {
+            repo.create_post_with_tags(data, user_id, &slug::slugify(data.title.clone()), &tags)
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    println!("Error on post_repo/create_post {:?}", err.to_string());
+                    AppError::Unknown
+                })
+        } else {
+            repo.create_post(data, user_id, &slug::slugify(data.title.clone()))
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    println!("Error on post_repo/create_post {:?}", err.to_string());
+                    AppError::Unknown
+                })
+        }
     }
 
     pub async fn delete_post(ctx: &Context, id: &u32) -> Result<(), AppError> {

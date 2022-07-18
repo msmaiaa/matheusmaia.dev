@@ -3,7 +3,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header};
 use std::env;
 
-use crate::common_types::TokenData;
+use crate::jwt::TokenData;
 
 pub struct AuthService;
 

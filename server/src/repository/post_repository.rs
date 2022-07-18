@@ -1,8 +1,9 @@
-use sqlx::mysql::MySqlQueryResult;
+use sqlx::{mysql::MySqlQueryResult, MySql, QueryBuilder};
 
 use crate::{
-    common_types::{CreatePostPayload, Pageable, Post, PostFilters},
+    common_types::{Pageable, Post, PostFilters},
     database::DbPool,
+    dto::CreatePostPayload,
 };
 use std::sync::Arc;
 
@@ -19,14 +20,7 @@ impl PostRepository {
         data: &CreatePostPayload,
         user_id: &u32,
         slug: &str,
-    ) -> Result<MySqlQueryResult, sqlx::Error> {
-        // let mut _params: Vec<post::SetParam> =
-        //     vec![post::published::set(data.published.unwrap_or(false))];
-        // if let Some(tags) = &data.tags {
-        //     _params.push(post::tags::link(
-        //         tags.into_iter().map(|tag| tag::id::equals(*tag)).collect(),
-        //     ))
-        // }
+    ) -> Result<u64, sqlx::Error> {
         sqlx::query!(
             "INSERT INTO Post (
 					content,
@@ -43,6 +37,46 @@ impl PostRepository {
         )
         .execute(&*self.db_pool)
         .await
+        .map(|res| res.last_insert_id())
+    }
+
+    pub async fn create_post_with_tags(
+        &self,
+        post_data: &CreatePostPayload,
+        user_id: &u32,
+        slug: &str,
+        tags: &Vec<u32>,
+    ) -> Result<(), sqlx::Error> {
+        //	we need to use a transaction to revert the post creation if the user send an invalid tag id
+        let mut transaction = self.db_pool.begin().await?;
+        let created_post_id = sqlx::query!(
+            "INSERT INTO Post (
+				content,
+				title,
+				slug,
+				published,
+				authorId
+			) VALUES (?, ?, ?, ?, ?)",
+            post_data.content,
+            post_data.title,
+            slug,
+            post_data.published,
+            user_id
+        )
+        .execute(&mut transaction)
+        .await?
+        .last_insert_id();
+
+        // this is how you insert multiple values at once
+        let mut query_builder: QueryBuilder<MySql> =
+            QueryBuilder::new("INSERT INTO TagOnPost(postId, tagId)");
+        query_builder.push_values(tags.into_iter().take(65535 / 4), |mut b, tag| {
+            b.push_bind(created_post_id).push_bind(tag);
+        });
+        query_builder.build().execute(&mut transaction).await?;
+
+        transaction.commit().await?;
+        Ok(())
     }
 
     pub async fn update_post(
@@ -73,6 +107,7 @@ impl PostRepository {
         pagination: &Pageable,
         filters: &PostFilters,
     ) -> Result<Vec<Post>, sqlx::Error> {
+        //	TODO: fix pagination
         sqlx::query_as!(Post, "SELECT * FROM Post")
             .fetch_all(&*self.db_pool)
             .await
