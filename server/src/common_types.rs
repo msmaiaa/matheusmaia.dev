@@ -1,7 +1,6 @@
-use chrono::Utc;
-
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{self, Deserialize};
+use sqlx::{postgres::PgRow, Row};
 
 #[derive(Object)]
 pub struct ErrorMessage {
@@ -67,7 +66,7 @@ pub struct User {
     pub updated_at: chrono::NaiveDateTime,
 }
 
-#[derive(Object, Clone, Deserialize, sqlx::FromRow)]
+#[derive(Object, Clone, Deserialize, sqlx::FromRow, Debug)]
 pub struct Post {
     pub id: i32,
     pub title: String,
@@ -77,6 +76,21 @@ pub struct Post {
     pub author_id: i32,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
+}
+
+impl From<PgRow> for Post {
+    fn from(row: PgRow) -> Self {
+        Post {
+            title: row.get("title"),
+            id: row.get("id"),
+            slug: row.get("content"),
+            published: row.get("published"),
+            author_id: row.get("author_id"),
+            content: row.get("content"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Default)]

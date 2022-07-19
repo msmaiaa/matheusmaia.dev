@@ -1,10 +1,10 @@
-use sqlx::{postgres::PgQueryResult, Postgres, QueryBuilder};
-
 use crate::{
     common_types::{Pageable, Post, PostFilters},
     database::DbPool,
     dto::CreatePostPayload,
 };
+use sqlx::{postgres::PgQueryResult, Postgres, QueryBuilder, Row};
+use sqlx_page::Page;
 use std::sync::Arc;
 
 pub struct PostRepository {
@@ -107,10 +107,17 @@ impl PostRepository {
         pagination: &Pageable,
         filters: &PostFilters,
     ) -> Result<Vec<Post>, sqlx::Error> {
-        //	TODO: fix pagination
-        sqlx::query_as!(Post, "SELECT * FROM Post")
+        let page = Page::new(true, 1, vec![String::from("id")]);
+        let mut builder = QueryBuilder::new("SELECT *, COUNT(id) FROM post");
+
+        page.push_order_by(&mut builder);
+        page.push_limit(&mut builder);
+
+        builder
+            .build()
             .fetch_all(&*self.db_pool)
             .await
+            .map(|res| res.into_iter().map(Post::from).collect())
         // if let Some(skip) = pagination.skip {
         //     query = query.skip(skip);
         // }
