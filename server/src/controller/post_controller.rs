@@ -70,7 +70,7 @@ impl PostController {
         req: &Request,
     ) -> Result<DeletePostResponse, ResponseError> {
         //	TODO: dont use fucking expect lol
-        let id = req.path_params::<u32>().expect("error on /post/:id delete");
+        let id = req.path_params::<i32>().expect("error on /post/:id delete");
         crate::service::PostService::delete_post(&data, &id)
             .await
             .map(|_| DeletePostResponse::Deleted)
@@ -86,7 +86,7 @@ impl PostController {
         mut body: Json<Post>,
     ) -> Result<PublishPostResponse, ResponseError> {
         body.id = req
-            .path_params::<u32>()
+            .path_params::<i32>()
             .expect("error on /post/:id publish");
         crate::service::PostService::update_post(&data, &body, &_auth.0.id)
             .await

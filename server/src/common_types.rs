@@ -48,7 +48,7 @@ impl From<AppError> for ResponseError {
 
 #[derive(Object)]
 pub struct Tag {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
 }
 
@@ -59,24 +59,24 @@ pub struct TagFilters {
 
 #[derive(Object)]
 pub struct User {
-    pub id: u32,
+    pub id: i32,
     pub username: String,
     pub password: String,
-    pub admin: i8,
-    pub createdAt: chrono::DateTime<Utc>,
-    pub updatedAt: chrono::DateTime<Utc>,
+    pub admin: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Object, Clone, Deserialize, sqlx::FromRow)]
 pub struct Post {
-    pub id: u32,
+    pub id: i32,
     pub title: String,
     pub slug: String,
     pub content: String,
-    pub published: i8,
-    pub authorId: u32,
-    pub createdAt: chrono::DateTime<Utc>,
-    pub updatedAt: chrono::DateTime<Utc>,
+    pub published: bool,
+    pub author_id: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]

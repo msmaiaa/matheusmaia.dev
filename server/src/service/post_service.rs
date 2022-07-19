@@ -8,7 +8,7 @@ impl PostService {
     pub async fn create_post(
         ctx: &Context,
         data: &CreatePostPayload,
-        user_id: &u32,
+        user_id: &i32,
     ) -> Result<(), AppError> {
         let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
 
@@ -31,7 +31,7 @@ impl PostService {
         }
     }
 
-    pub async fn delete_post(ctx: &Context, id: &u32) -> Result<(), AppError> {
+    pub async fn delete_post(ctx: &Context, id: &i32) -> Result<(), AppError> {
         let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
         repo.delete_post(id).await.map(|_| ()).map_err(|err| {
             println!("Error on post_repo/delete_post {:?}", err.to_string());
@@ -39,7 +39,7 @@ impl PostService {
         })
     }
 
-    pub async fn update_post(ctx: &Context, data: &Post, user_id: &u32) -> Result<(), AppError> {
+    pub async fn update_post(ctx: &Context, data: &Post, user_id: &i32) -> Result<(), AppError> {
         //	TODO: check if the user trying to update is the author
         let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
         repo.update_post(data, user_id)

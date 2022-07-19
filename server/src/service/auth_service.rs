@@ -28,9 +28,9 @@ impl AuthService {
                 }
                 let hashed_pass = AuthService::encrypt(&password);
                 user_repo
-                    .create(&username, &hashed_pass, 1)
+                    .create(&username, &hashed_pass, true)
                     .await
-                    .map(|created_id| Some(AuthService::create_access_token(created_id as u32)))
+                    .map(|created_id| Some(AuthService::create_access_token(created_id)))
                     .unwrap_or(None)
             }
         }
@@ -43,7 +43,7 @@ impl AuthService {
         username == admin_username
     }
 
-    pub fn create_access_token(id: u32) -> String {
+    pub fn create_access_token(id: i32) -> String {
         let iat = Utc::now();
         let exp = iat + Duration::seconds(3600);
         let iat = iat.timestamp_millis();

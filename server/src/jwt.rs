@@ -5,7 +5,7 @@ use crate::service::AuthService;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TokenData {
-    pub id: u32,
+    pub id: i32,
     pub iat: i64,
     pub exp: i64,
 }

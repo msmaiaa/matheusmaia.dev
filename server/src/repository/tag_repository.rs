@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sqlx::mysql::MySqlQueryResult;
+use sqlx::postgres::PgQueryResult;
 
 use crate::{
     common_types::{Pageable, Tag, TagFilters},
@@ -16,14 +16,14 @@ impl TagRepository {
         TagRepository { db_pool }
     }
 
-    pub async fn create(&self, name: &str) -> Result<MySqlQueryResult, sqlx::Error> {
-        sqlx::query!("INSERT INTO Tag (name) values (?)", name)
+    pub async fn create(&self, name: &str) -> Result<PgQueryResult, sqlx::Error> {
+        sqlx::query!("INSERT INTO Tag (name) values ($1)", name)
             .execute(&*self.db_pool)
             .await
     }
 
-    pub async fn delete(&self, id: &u64) -> Result<Option<()>, sqlx::Error> {
-        sqlx::query!("DELETE FROM Tag WHERE id=?", id)
+    pub async fn delete(&self, id: &i32) -> Result<Option<()>, sqlx::Error> {
+        sqlx::query!("DELETE FROM Tag WHERE id=$1", id)
             .execute(&*self.db_pool)
             .await
             .map(|res| match res.rows_affected() > 0 {

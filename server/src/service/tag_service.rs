@@ -15,7 +15,7 @@ impl TagService {
         })
     }
 
-    pub async fn delete(ctx: &Context, id: &u64) -> Result<(), AppError> {
+    pub async fn delete(ctx: &Context, id: &i32) -> Result<(), AppError> {
         let repo = TagRepository::new(ctx.db_pool.clone());
         repo.delete(id).await.map_or(Ok(()), |res| match res {
             Some(_) => Ok(()),

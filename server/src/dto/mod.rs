@@ -5,5 +5,5 @@ pub struct CreatePostPayload {
     pub title: String,
     pub content: String,
     pub published: Option<bool>,
-    pub tags: Option<Vec<u32>>,
+    pub tags: Option<Vec<i32>>,
 }

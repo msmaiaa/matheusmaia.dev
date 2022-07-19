@@ -11,7 +11,7 @@ impl UserRepository {
     }
 
     pub async fn find_by_username(&self, username: &str) -> Option<User> {
-        sqlx::query_as!(User, "SELECT * FROM User WHERE username=?", username)
+        sqlx::query_as!(User, "SELECT * FROM Users WHERE username=$1", username)
             .fetch_optional(&*self.db_client)
             .await
             .unwrap_or_else(|err| {
@@ -20,15 +20,14 @@ impl UserRepository {
             })
     }
 
-    pub async fn create(&self, username: &str, password: &str, admin: i8) -> Option<u64> {
-        sqlx::query_as!(
-            User,
-            "INSERT INTO User (username, password, admin) VALUES (?, ?, ?)",
+    pub async fn create(&self, username: &str, password: &str, admin: bool) -> Option<i32> {
+        sqlx::query!(
+            "INSERT INTO Users (username, password, admin) VALUES ($1, $2, $3) RETURNING id",
             username,
             password,
             admin
         )
-        .execute(&*self.db_client)
+        .fetch_one(&*self.db_client)
         .await
         .map_or_else(
             |err| {
@@ -38,7 +37,7 @@ impl UserRepository {
                 );
                 None
             },
-            |res| Some(res.last_insert_id()),
+            |res| Some(res.id),
         )
     }
 }

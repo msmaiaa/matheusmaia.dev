@@ -64,7 +64,7 @@ impl TagController {
         req: &Request,
         data: Data<&Context>,
     ) -> Result<DeleteTagResponse, ResponseError> {
-        let id = req.path_params::<u64>().expect("Error on path params");
+        let id = req.path_params::<i32>().expect("Error on path params");
 
         crate::service::TagService::delete(&data, &id)
             .await

@@ -1,4 +1,4 @@
-use sqlx::{mysql::MySqlQueryResult, MySql, QueryBuilder};
+use sqlx::{postgres::PgQueryResult, Postgres, QueryBuilder};
 
 use crate::{
     common_types::{Pageable, Post, PostFilters},
@@ -18,58 +18,58 @@ impl PostRepository {
     pub async fn create_post(
         &self,
         data: &CreatePostPayload,
-        user_id: &u32,
+        user_id: &i32,
         slug: &str,
-    ) -> Result<u64, sqlx::Error> {
+    ) -> Result<i32, sqlx::Error> {
         sqlx::query!(
             "INSERT INTO Post (
 					content,
 					title,
 					slug,
 					published,
-					authorId
-				) VALUES (?, ?, ?, ?, ?)",
+					author_id
+				) VALUES ($1, $2, $3, $4, $5) RETURNING id",
             data.content,
             data.title,
             slug,
             data.published,
-            user_id
+            *user_id
         )
-        .execute(&*self.db_pool)
+        .fetch_one(&*self.db_pool)
         .await
-        .map(|res| res.last_insert_id())
+        .map(|res| res.id)
     }
 
     pub async fn create_post_with_tags(
         &self,
         post_data: &CreatePostPayload,
-        user_id: &u32,
+        user_id: &i32,
         slug: &str,
-        tags: &Vec<u32>,
+        tags: &Vec<i32>,
     ) -> Result<(), sqlx::Error> {
         //	we need to use a transaction to revert the post creation if the user send an invalid tag id
         let mut transaction = self.db_pool.begin().await?;
         let created_post_id = sqlx::query!(
-            "INSERT INTO Post (
+            "INSERT INTO post (
 				content,
 				title,
 				slug,
 				published,
-				authorId
-			) VALUES (?, ?, ?, ?, ?)",
+				author_id
+			) VALUES ($1, $2, $3, $4, $5) RETURNING id",
             post_data.content,
             post_data.title,
             slug,
             post_data.published,
-            user_id
+            *user_id
         )
-        .execute(&mut transaction)
+        .fetch_one(&mut transaction)
         .await?
-        .last_insert_id();
+        .id;
 
         // this is how you insert multiple values at once
-        let mut query_builder: QueryBuilder<MySql> =
-            QueryBuilder::new("INSERT INTO TagOnPost(postId, tagId)");
+        let mut query_builder: QueryBuilder<Postgres> =
+            QueryBuilder::new("INSERT INTO tag_on_post(post_id, tag_id)");
         query_builder.push_values(tags.into_iter().take(65535 / 4), |mut b, tag| {
             b.push_bind(created_post_id).push_bind(tag);
         });
@@ -82,22 +82,22 @@ impl PostRepository {
     pub async fn update_post(
         &self,
         data: &Post,
-        user_id: &u32,
-    ) -> Result<MySqlQueryResult, sqlx::Error> {
+        user_id: &i32,
+    ) -> Result<PgQueryResult, sqlx::Error> {
         sqlx::query!(
-            "UPDATE Post SET content=?, title=?, slug=?, published=? WHERE authorId=?",
+            "UPDATE Post SET content=$1, title=$2, slug=$3, published=$4 WHERE author_id=$5",
             data.content,
             data.title,
             data.slug,
             data.published,
-            user_id
+            *user_id
         )
         .execute(&*self.db_pool)
         .await
     }
 
-    pub async fn delete_post(&self, id: &u32) -> Result<MySqlQueryResult, sqlx::Error> {
-        sqlx::query!("DELETE FROM Post WHERE id=?", id)
+    pub async fn delete_post(&self, id: &i32) -> Result<PgQueryResult, sqlx::Error> {
+        sqlx::query!("DELETE FROM Post WHERE id=$1", id)
             .execute(&*self.db_pool)
             .await
     }
