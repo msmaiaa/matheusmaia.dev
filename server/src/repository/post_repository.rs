@@ -1,10 +1,12 @@
 use crate::{
     common_types::{Pageable, Post, PostFilters},
-    database::DbPool,
+    database::{build_paginated_query, DbPool},
     dto::CreatePostPayload,
 };
-use sqlx::{postgres::PgQueryResult, Postgres, QueryBuilder, Row};
-use sqlx_page::Page;
+use sqlx::{
+    postgres::{PgQueryResult, PgRow},
+    Postgres, QueryBuilder, Row,
+};
 use std::sync::Arc;
 
 pub struct PostRepository {
@@ -106,23 +108,15 @@ impl PostRepository {
         &self,
         pagination: &Pageable,
         filters: &PostFilters,
-    ) -> Result<Vec<Post>, sqlx::Error> {
-        let page = Page::new(true, 1, vec![String::from("id")]);
-        let mut builder = QueryBuilder::new("SELECT *, COUNT(id) FROM post");
-
-        page.push_order_by(&mut builder);
-        page.push_limit(&mut builder);
-
-        builder
-            .build()
-            .fetch_all(&*self.db_pool)
-            .await
-            .map(|res| res.into_iter().map(Post::from).collect())
-        // if let Some(skip) = pagination.skip {
-        //     query = query.skip(skip);
-        // }
-        // if let Some(take) = pagination.take {
-        //     query = query.take(take);
-        // }
+    ) -> Result<Vec<PgRow>, sqlx::Error> {
+        let built_query = build_paginated_query(
+            "SELECT id, content, title, slug, published, author_id, created_at, updated_at
+		FROM post",
+            &None,
+            &pagination.page,
+            &pagination.take,
+        );
+        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(built_query);
+        builder.build().fetch_all(&*self.db_pool).await
     }
 }

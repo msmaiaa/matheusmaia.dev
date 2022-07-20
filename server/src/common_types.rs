@@ -1,5 +1,5 @@
 use poem_openapi::{payload::Json, ApiResponse, Object};
-use serde::{self, Deserialize};
+use serde::{self, Deserialize, Serialize};
 use sqlx::{postgres::PgRow, Row};
 
 #[derive(Object)]
@@ -66,7 +66,7 @@ pub struct User {
     pub updated_at: chrono::NaiveDateTime,
 }
 
-#[derive(Object, Clone, Deserialize, sqlx::FromRow, Debug)]
+#[derive(Object, Clone, Deserialize, Serialize, sqlx::FromRow, Debug)]
 pub struct Post {
     pub id: i32,
     pub title: String,
@@ -76,6 +76,8 @@ pub struct Post {
     pub author_id: i32,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
+    #[serde(skip_serializing)]
+    pub totalrows: Option<i64>,
 }
 
 impl From<PgRow> for Post {
@@ -89,6 +91,7 @@ impl From<PgRow> for Post {
             content: row.get("content"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
+            totalrows: row.get("totalrows"),
         }
     }
 }
@@ -100,6 +103,6 @@ pub struct PostFilters {
 
 #[derive(serde::Deserialize, Debug, Default)]
 pub struct Pageable {
-    pub skip: Option<i64>,
+    pub page: Option<i64>,
     pub take: Option<i64>,
 }

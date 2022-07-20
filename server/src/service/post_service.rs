@@ -55,11 +55,21 @@ impl PostService {
         ctx: &Context,
         query: &PostFilters,
         pagination: &Pageable,
-    ) -> Result<Vec<Post>, AppError> {
+    ) -> Result<(Vec<Post>, i64), AppError> {
         let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
-        repo.find_many(pagination, query).await.map_err(|err| {
-            println!("error on user post_repo/find_many: {:?}", err);
-            AppError::Unknown
-        })
+        repo.find_many(pagination, query)
+            .await
+            .map(|rows| {
+                let parsed: Vec<Post> = rows.into_iter().map(Post::from).collect();
+                let total = parsed
+                    .last()
+                    .map(|last| last.totalrows.unwrap_or(0))
+                    .unwrap_or(0);
+                (parsed, total)
+            })
+            .map_err(|err| {
+                println!("error on user post_repo/find_many: {:?}", err);
+                AppError::Unknown
+            })
     }
 }

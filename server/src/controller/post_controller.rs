@@ -1,5 +1,6 @@
 use poem::{web::Data, Request};
-use poem_openapi::{payload::Json, ApiResponse, OpenApi};
+use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     common_types::{ErrorMessage, Pageable, Post, PostFilters, ResponseError},
@@ -22,10 +23,16 @@ enum DeletePostResponse {
     Deleted,
 }
 
+#[derive(Serialize, Deserialize, Object)]
+struct PostFindMany {
+    pub data: Vec<Post>,
+    pub total: i64,
+}
+
 #[derive(ApiResponse)]
 enum GetPostsResponse {
     #[oai(status = 200)]
-    Ok(Json<Vec<Post>>),
+    Ok(Json<PostFindMany>),
 }
 
 #[derive(ApiResponse)]
@@ -104,7 +111,7 @@ impl PostController {
         let filters = req.params::<Pageable>().unwrap_or_default();
         crate::service::PostService::find_many(&data, &name, &filters)
             .await
-            .map(|posts| GetPostsResponse::Ok(Json(posts)))
+            .map(|(posts, total)| GetPostsResponse::Ok(Json(PostFindMany { data: posts, total })))
             .map_err(ResponseError::from)
     }
 }

@@ -14,3 +14,34 @@ pub async fn start_db(max_connections: &u32, connection_uri: &str) -> Pool<Postg
             )
         })
 }
+
+pub fn build_paginated_query(
+    query: &str,
+    order_by: &Option<&str>,
+    page: &Option<i64>,
+    page_size: &Option<i64>,
+) -> String {
+    format!(
+        "WITH Data_CTE
+AS
+(
+{}
+), 
+Count_CTE 
+AS 
+(
+	SELECT COUNT(*) AS TotalRows FROM Data_CTE
+)
+SELECT *
+FROM Data_CTE
+CROSS JOIN Count_CTE
+ORDER BY {}
+OFFSET ({} - 1) * {}
+FETCH NEXT {} ROWS ONLY",
+        query,
+        order_by.unwrap_or("id"),
+        page.unwrap_or(1),
+        page_size.unwrap_or(10),
+        page_size.unwrap_or(10)
+    )
+}
