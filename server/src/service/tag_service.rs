@@ -24,14 +24,10 @@ impl TagService {
     }
 
     //	TODO: add query fields to swagger
-    pub async fn find_many(
-        ctx: &Context,
-        params: Pageable,
-        query: TagFilters,
-    ) -> Result<Vec<Tag>, AppError> {
+    pub async fn find_many(ctx: &Context, query: &TagFilters) -> Result<Vec<Tag>, AppError> {
         let repo = TagRepository::new(ctx.db_pool.clone());
 
-        repo.find_many(params, query).await.map_err(|err| {
+        repo.find_many(query).await.map_err(|err| {
             println!("{:?}", err);
             AppError::Unknown
         })

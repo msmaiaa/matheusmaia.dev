@@ -51,6 +51,15 @@ pub struct Tag {
     pub name: String,
 }
 
+impl From<PgRow> for Tag {
+    fn from(row: PgRow) -> Self {
+        Tag {
+            name: row.get("name"),
+            id: row.get("id"),
+        }
+    }
+}
+
 #[derive(serde::Deserialize, Debug, Default)]
 pub struct TagFilters {
     pub name: Option<String>,

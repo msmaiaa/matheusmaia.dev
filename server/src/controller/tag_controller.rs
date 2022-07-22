@@ -50,9 +50,8 @@ impl TagController {
         req: &Request,
         data: Data<&Context>,
     ) -> Result<FindTagsResponse, ResponseError> {
-        let filters = req.params::<Pageable>().unwrap_or_default();
-        let other_params = req.params::<TagFilters>().unwrap_or_default();
-        crate::service::TagService::find_many(&data, filters, other_params)
+        let tag_filters = req.params::<TagFilters>().unwrap_or_default();
+        crate::service::TagService::find_many(&data, &tag_filters)
             .await
             .map(|tags| FindTagsResponse::Ok(Json(tags)))
             .map_err(|e| e.into())

@@ -32,21 +32,14 @@ impl TagRepository {
             })
     }
 
-    pub async fn find_many(
-        &self,
-        pagination: Pageable,
-        query: TagFilters,
-    ) -> Result<Vec<Tag>, sqlx::Error> {
-        //	TODO: add pagination
-        sqlx::query_as!(Tag, "SELECT * FROM Tag")
+    pub async fn find_many(&self, query: &TagFilters) -> Result<Vec<Tag>, sqlx::Error> {
+        let mut query_string = "SELECT * FROM Tag".to_string();
+        if let Some(name) = &query.name {
+            query_string.push_str(&format!(" WHERE name ILIKE '%{}%'", name));
+        }
+        sqlx::query(&query_string)
             .fetch_all(&*self.db_pool)
             .await
-        // if let Some(skip) = pagination.skip {
-        //     query = query.skip(skip);
-        // }
-        // if let Some(take) = pagination.take {
-        //     query = query.take(take);
-        // }
-        // query.exec().await
+            .map(|rows| rows.into_iter().map(Tag::from).collect())
     }
 }
