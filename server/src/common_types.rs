@@ -1,12 +1,6 @@
 use poem_openapi::{payload::Json, ApiResponse, Object};
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct TokenData {
-    pub username: String,
-    pub id: i32,
-    pub iat: i64,
-    pub exp: i64,
-}
+use serde::{self, Deserialize, Serialize};
+use sqlx::{postgres::PgRow, Row};
 
 #[derive(Object)]
 pub struct ErrorMessage {
@@ -57,13 +51,18 @@ pub struct Tag {
     pub name: String,
 }
 
-impl From<crate::prisma::tag::Data> for Tag {
-    fn from(data: crate::prisma::tag::Data) -> Self {
+impl From<PgRow> for Tag {
+    fn from(row: PgRow) -> Self {
         Tag {
-            id: data.id,
-            name: data.name,
+            name: row.get("name"),
+            id: row.get("id"),
         }
     }
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+pub struct TagFilters {
+    pub name: Option<String>,
 }
 
 #[derive(Object)]
@@ -72,51 +71,47 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub admin: bool,
-    pub posts: Option<Vec<Post>>,
-    pub created_at: chrono::DateTime<chrono::FixedOffset>,
-    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
-#[derive(Object, Clone)]
+#[derive(Object, Clone, Deserialize, Serialize, sqlx::FromRow, Debug)]
 pub struct Post {
     pub id: i32,
     pub title: String,
+    pub slug: String,
     pub content: String,
     pub published: bool,
     pub author_id: i32,
-    pub created_at: chrono::DateTime<chrono::FixedOffset>,
-    pub updated_at: chrono::DateTime<chrono::FixedOffset>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    #[oai(skip)]
+    pub totalrows: Option<i64>,
 }
 
-impl From<crate::prisma::post::Data> for Post {
-    fn from(data: crate::prisma::post::Data) -> Self {
+impl From<PgRow> for Post {
+    fn from(row: PgRow) -> Self {
         Post {
-            id: data.id,
-            title: data.title,
-            content: data.content,
-            published: data.published,
-            author_id: data.author_id,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
+            title: row.get("title"),
+            id: row.get("id"),
+            slug: row.get("content"),
+            published: row.get("published"),
+            author_id: row.get("author_id"),
+            content: row.get("content"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            totalrows: row.get("totalrows"),
         }
     }
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
-pub struct Pageable {
-    pub skip: Option<i64>,
-    pub take: Option<i64>,
+pub struct PostFilters {
+    pub title: Option<String>,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
-pub struct TagFilters {
-    pub name: Option<String>,
-}
-
-#[derive(serde::Deserialize, Object)]
-pub struct CreatePostPayload {
-    pub title: String,
-    pub content: String,
-    pub published: Option<bool>,
-    pub tags: Option<Vec<i32>>,
+pub struct Pageable {
+    pub page: Option<i64>,
+    pub take: Option<i64>,
 }

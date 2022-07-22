@@ -1,7 +1,14 @@
 use poem::Request;
 use poem_openapi::{auth::Bearer, SecurityScheme};
 
-use crate::{common_types::TokenData, service::AuthService};
+use crate::service::AuthService;
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct TokenData {
+    pub id: i32,
+    pub iat: i64,
+    pub exp: i64,
+}
 
 #[derive(SecurityScheme)]
 #[oai(

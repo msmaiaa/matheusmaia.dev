@@ -1,53 +1,45 @@
 use std::sync::Arc;
 
+use sqlx::postgres::PgQueryResult;
+
 use crate::{
-    common_types::{Pageable, TagFilters},
-    prisma::{self, tag, PrismaClient},
+    common_types::{Pageable, Tag, TagFilters},
+    database::DbPool,
 };
 
 pub struct TagRepository {
-    client: Arc<PrismaClient>,
+    db_pool: Arc<DbPool>,
 }
 
 impl TagRepository {
-    pub fn new(client: Arc<PrismaClient>) -> TagRepository {
-        TagRepository { client }
+    pub fn new(db_pool: Arc<DbPool>) -> TagRepository {
+        TagRepository { db_pool }
     }
 
-    pub async fn create(&self, name: &str) -> Result<tag::Data, prisma_client_rust::Error> {
-        self.client
-            .tag()
-            .create(tag::name::set(name.to_string()), vec![])
-            .exec()
+    pub async fn create(&self, name: &str) -> Result<PgQueryResult, sqlx::Error> {
+        sqlx::query!("INSERT INTO Tag (name) values ($1)", name)
+            .execute(&*self.db_pool)
             .await
     }
 
-    pub async fn delete(&self, id: &i32) -> Result<Option<tag::Data>, prisma_client_rust::Error> {
-        self.client
-            .tag()
-            .find_unique(tag::id::equals(*id))
-            .delete()
-            .exec()
+    pub async fn delete(&self, id: &i32) -> Result<Option<()>, sqlx::Error> {
+        sqlx::query!("DELETE FROM Tag WHERE id=$1", id)
+            .execute(&*self.db_pool)
             .await
+            .map(|res| match res.rows_affected() > 0 {
+                true => Some(()),
+                false => None,
+            })
     }
 
-    pub async fn find_many(
-        &self,
-        pagination: Pageable,
-        query: TagFilters,
-    ) -> Result<Vec<prisma::tag::Data>, prisma_client_rust::Error> {
-        let mut query = self
-            .client
-            .tag()
-            .find_many(vec![crate::prisma::tag::name::contains(
-                query.name.unwrap_or("".to_string()),
-            )]);
-        if let Some(skip) = pagination.skip {
-            query = query.skip(skip);
+    pub async fn find_many(&self, query: &TagFilters) -> Result<Vec<Tag>, sqlx::Error> {
+        let mut query_string = "SELECT * FROM Tag".to_string();
+        if let Some(name) = &query.name {
+            query_string.push_str(&format!(" WHERE name ILIKE '%{}%'", name));
         }
-        if let Some(take) = pagination.take {
-            query = query.take(take);
-        }
-        query.exec().await
+        sqlx::query(&query_string)
+            .fetch_all(&*self.db_pool)
+            .await
+            .map(|rows| rows.into_iter().map(Tag::from).collect())
     }
 }
