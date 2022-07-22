@@ -109,13 +109,17 @@ impl PostRepository {
         pagination: &Pageable,
         filters: &PostFilters,
     ) -> Result<Vec<PgRow>, sqlx::Error> {
-        let built_query = build_paginated_query(
+        let mut query_string =
             "SELECT id, content, title, slug, published, author_id, created_at, updated_at
-		FROM post",
-            &None,
-            &pagination.page,
-            &pagination.take,
-        );
+			FROM post"
+                .to_string();
+
+        if let Some(title) = &filters.title {
+            query_string.push_str(&format!(" WHERE title ILIKE '%{}%'", *title));
+        }
+
+        let built_query =
+            build_paginated_query(&query_string, &None, &pagination.page, &pagination.take);
         let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(built_query);
         builder.build().fetch_all(&*self.db_pool).await
     }

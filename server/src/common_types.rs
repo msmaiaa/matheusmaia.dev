@@ -76,7 +76,7 @@ pub struct Post {
     pub author_id: i32,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
-    #[serde(skip_serializing)]
+    #[oai(skip)]
     pub totalrows: Option<i64>,
 }
 
