@@ -1,70 +1,106 @@
 use crate::{
-    common_types::{CreatePostPayload, Pageable, Post, PostFilters},
-    prisma::{post, tag, user, PrismaClient},
+    common_types::{Pageable, Post, PostFilters},
+    database::{build_paginated_query, DbPool},
+    dto::CreatePostPayload,
 };
+use sqlx::{
+    postgres::{PgQueryResult, PgRow},
+    Postgres, QueryBuilder, Row,
+};
+use std::sync::Arc;
 
 pub struct PostRepository {
-    client: std::sync::Arc<PrismaClient>,
+    db_pool: Arc<DbPool>,
 }
 
 impl PostRepository {
-    pub fn new(client: std::sync::Arc<PrismaClient>) -> Self {
-        PostRepository { client }
+    pub fn new(db_pool: Arc<DbPool>) -> Self {
+        PostRepository { db_pool }
     }
     pub async fn create_post(
         &self,
         data: &CreatePostPayload,
         user_id: &i32,
         slug: &str,
-    ) -> Result<post::Data, prisma_client_rust::Error> {
-        let mut _params: Vec<post::SetParam> =
-            vec![post::published::set(data.published.unwrap_or(false))];
-        if let Some(tags) = &data.tags {
-            _params.push(post::tags::link(
-                tags.into_iter().map(|tag| tag::id::equals(*tag)).collect(),
-            ))
-        }
+    ) -> Result<i32, sqlx::Error> {
+        sqlx::query!(
+            "INSERT INTO Post (
+					content,
+					title,
+					slug,
+					published,
+					author_id
+				) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            data.content,
+            data.title,
+            slug,
+            data.published,
+            *user_id
+        )
+        .fetch_one(&*self.db_pool)
+        .await
+        .map(|res| res.id)
+    }
 
-        self.client
-            .post()
-            .create(
-                post::title::set(data.title.clone()),
-                post::slug::set(slug.to_string()),
-                post::content::set(data.content.clone()),
-                post::author::link(user::id::equals(*user_id)),
-                _params,
-            )
-            .exec()
-            .await
+    pub async fn create_post_with_tags(
+        &self,
+        post_data: &CreatePostPayload,
+        user_id: &i32,
+        slug: &str,
+        tags: &Vec<i32>,
+    ) -> Result<(), sqlx::Error> {
+        //	we need to use a transaction to revert the post creation if the user send an invalid tag id
+        let mut transaction = self.db_pool.begin().await?;
+        let created_post_id = sqlx::query!(
+            "INSERT INTO post (
+				content,
+				title,
+				slug,
+				published,
+				author_id
+			) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            post_data.content,
+            post_data.title,
+            slug,
+            post_data.published,
+            *user_id
+        )
+        .fetch_one(&mut transaction)
+        .await?
+        .id;
+
+        // this is how you insert multiple values at once
+        let mut query_builder: QueryBuilder<Postgres> =
+            QueryBuilder::new("INSERT INTO tag_on_post(post_id, tag_id)");
+        query_builder.push_values(tags.into_iter().take(65535 / 4), |mut b, tag| {
+            b.push_bind(created_post_id).push_bind(tag);
+        });
+        query_builder.build().execute(&mut transaction).await?;
+
+        transaction.commit().await?;
+        Ok(())
     }
 
     pub async fn update_post(
         &self,
         data: &Post,
-    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
-        //	update the post
-        let _data = data.clone();
-        self.client
-            .post()
-            .find_unique(post::id::equals(data.id))
-            .update(vec![
-                post::published::set(_data.published),
-                post::title::set(_data.title),
-                post::content::set(_data.content),
-            ])
-            .exec()
-            .await
+        user_id: &i32,
+    ) -> Result<PgQueryResult, sqlx::Error> {
+        sqlx::query!(
+            "UPDATE Post SET content=$1, title=$2, slug=$3, published=$4 WHERE author_id=$5",
+            data.content,
+            data.title,
+            data.slug,
+            data.published,
+            *user_id
+        )
+        .execute(&*self.db_pool)
+        .await
     }
 
-    pub async fn delete_post(
-        &self,
-        id: &i32,
-    ) -> Result<Option<post::Data>, prisma_client_rust::Error> {
-        self.client
-            .post()
-            .find_unique(post::id::equals(*id))
-            .delete()
-            .exec()
+    pub async fn delete_post(&self, id: &i32) -> Result<PgQueryResult, sqlx::Error> {
+        sqlx::query!("DELETE FROM Post WHERE id=$1", id)
+            .execute(&*self.db_pool)
             .await
     }
 
@@ -72,19 +108,19 @@ impl PostRepository {
         &self,
         pagination: &Pageable,
         filters: &PostFilters,
-    ) -> Result<Vec<post::Data>, prisma_client_rust::Error> {
-        let mut query = self
-            .client
-            .post()
-            .find_many(vec![crate::prisma::post::title::contains(
-                filters.title.as_deref().unwrap_or("").to_string(),
-            )]);
-        if let Some(skip) = pagination.skip {
-            query = query.skip(skip);
+    ) -> Result<Vec<PgRow>, sqlx::Error> {
+        let mut query_string =
+            "SELECT id, content, title, slug, published, author_id, created_at, updated_at
+			FROM post"
+                .to_string();
+
+        if let Some(title) = &filters.title {
+            query_string.push_str(&format!(" WHERE title ILIKE '%{}%'", *title));
         }
-        if let Some(take) = pagination.take {
-            query = query.take(take);
-        }
-        query.exec().await
+
+        let built_query =
+            build_paginated_query(&query_string, &None, &pagination.page, &pagination.take);
+        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(built_query);
+        builder.build().fetch_all(&*self.db_pool).await
     }
 }

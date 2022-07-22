@@ -3,29 +3,23 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header};
 use std::env;
 
-use crate::{
-    common_types::TokenData,
-    prisma::{self},
-};
+use crate::jwt::TokenData;
 
 pub struct AuthService;
 
 impl AuthService {
     pub async fn login(
-        prisma: std::sync::Arc<prisma::PrismaClient>,
+        ctx: &crate::config::Context,
         username: &str,
         password: &str,
     ) -> Option<String> {
         // TODO: automatically create the admin user on container startup and remove this logic
-        let user_repo = crate::repository::user_repository::UserRepository::new(prisma);
-        let found_user: Option<prisma::user::Data> = user_repo
-            .find_by_username(&username)
-            .await
-            .map(|user| user)
-            .unwrap_or_else(|_| return None);
+        let user_repo =
+            crate::repository::user_repository::UserRepository::new(ctx.db_pool.clone());
+        let found_user = user_repo.find_by_username(&username).await;
         match found_user {
             Some(user) => match AuthService::compare_hash(&password, &user.password) {
-                true => return Some(AuthService::create_access_token(&user.username, &user.id)),
+                true => return Some(AuthService::create_access_token(user.id)),
                 false => return None,
             },
             None => {
@@ -36,7 +30,7 @@ impl AuthService {
                 user_repo
                     .create(&username, &hashed_pass, true)
                     .await
-                    .map(|data| Some(AuthService::create_access_token(&data.username, &data.id)))
+                    .map(|created_id| Some(AuthService::create_access_token(created_id)))
                     .unwrap_or(None)
             }
         }
@@ -49,7 +43,7 @@ impl AuthService {
         username == admin_username
     }
 
-    pub fn create_access_token(username: &str, id: &i32) -> String {
+    pub fn create_access_token(id: i32) -> String {
         let iat = Utc::now();
         let exp = iat + Duration::seconds(3600);
         let iat = iat.timestamp_millis();
@@ -57,12 +51,7 @@ impl AuthService {
 
         let key =
             EncodingKey::from_secret(env::var("JWT_KEY").expect("JWT_KEY not set").as_bytes());
-        let claims = TokenData {
-            username: username.to_string(),
-            id: *id,
-            iat,
-            exp,
-        };
+        let claims = TokenData { id, iat, exp };
         let header = Header::new(Algorithm::HS256);
         encode(&header, &claims, &key).expect("Failed to create access token")
     }

@@ -1,42 +1,43 @@
 use std::sync::Arc;
 
-use crate::prisma::{self, user, PrismaClient};
-
+use crate::{common_types::User, database::DbPool};
 pub struct UserRepository {
-    client: Arc<PrismaClient>,
+    db_client: Arc<DbPool>,
 }
 
 impl UserRepository {
-    pub fn new(client: Arc<PrismaClient>) -> UserRepository {
-        UserRepository { client }
+    pub fn new(db_client: Arc<DbPool>) -> UserRepository {
+        UserRepository { db_client }
     }
 
-    pub async fn find_by_username(
-        &self,
-        username: &str,
-    ) -> Result<Option<prisma::user::Data>, prisma_client_rust::Error> {
-        self.client
-            .user()
-            .find_first(vec![user::username::equals(username.to_string())])
-            .exec()
+    pub async fn find_by_username(&self, username: &str) -> Option<User> {
+        sqlx::query_as!(User, "SELECT * FROM Users WHERE username=$1", username)
+            .fetch_optional(&*self.db_client)
             .await
+            .unwrap_or_else(|err| {
+                println!("Error on find_by_username on user_repository: {:?}", err);
+                None
+            })
     }
 
-    pub async fn create(
-        &self,
-        username: &str,
-        password: &str,
-        admin: bool,
-    ) -> Result<prisma::user::Data, prisma_client_rust::Error> {
-        self.client
-            .user()
-            .create(
-                user::username::set(username.to_string()),
-                user::password::set(password.to_string()),
-                user::admin::set(admin),
-                vec![],
-            )
-            .exec()
-            .await
+    pub async fn create(&self, username: &str, password: &str, admin: bool) -> Option<i32> {
+        sqlx::query!(
+            "INSERT INTO Users (username, password, admin) VALUES ($1, $2, $3) RETURNING id",
+            username,
+            password,
+            admin
+        )
+        .fetch_one(&*self.db_client)
+        .await
+        .map_or_else(
+            |err| {
+                println!(
+                    "error on user_repository/create{:?}",
+                    err.as_database_error()
+                );
+                None
+            },
+            |res| Some(res.id),
+        )
     }
 }

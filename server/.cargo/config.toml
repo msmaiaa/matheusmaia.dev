@@ -1,3 +1,0 @@
-
-[alias]
-prisma = "run --package prisma-cli --bin prisma-cli"

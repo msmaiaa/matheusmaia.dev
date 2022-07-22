@@ -1,99 +1,74 @@
 use crate::common_types::{AppError, Pageable, Post, PostFilters};
-use crate::{common_types::CreatePostPayload, prisma::PrismaClient};
-use prisma_client_rust::prisma_errors::{query_engine::*, UserFacingError};
+use crate::config::Context;
 
 pub struct PostService;
+use crate::dto::CreatePostPayload;
 use crate::repository::post_repository;
-
-fn is_err<T: UserFacingError>(err: &prisma_client_rust::prisma_errors::Error) -> bool {
-    prisma_client_rust::error_is_type::<T>(err)
-}
-
-fn get_error(err: &prisma_client_rust::prisma_errors::Error) -> crate::common_types::AppError {
-    if is_err::<RecordRequiredButNotFound>(&err) {
-        return AppError::BadRequest("Record required but not found".to_string());
-    } else if is_err::<UniqueKeyViolation>(&err) {
-        return AppError::BadRequest("Unique key violation".to_string());
-    }
-    AppError::BadRequest(err.message().to_string())
-}
-
 impl PostService {
     pub async fn create_post(
-        prisma: std::sync::Arc<PrismaClient>,
+        ctx: &Context,
         data: &CreatePostPayload,
         user_id: &i32,
-    ) -> Result<Post, AppError> {
-        let repo = post_repository::PostRepository::new(prisma);
-        let res = repo
-            .create_post(data, user_id, &slug::slugify(data.title.clone()))
-            .await;
-        if let Ok(data) = res {
-            return Ok(Post::from(data));
-        }
-        if let Err(err) = res {
-            match err {
-                prisma_client_rust::Error::Execute(err) => return Err(get_error(&err)),
-                _ => return Err(AppError::Unknown),
-            }
-        }
-        Err(AppError::Unknown)
-    }
-
-    pub async fn delete_post(
-        prisma: std::sync::Arc<PrismaClient>,
-        id: &i32,
     ) -> Result<(), AppError> {
-        let repo = post_repository::PostRepository::new(prisma);
-        match repo.delete_post(id).await {
-            Ok(data) => {
-                if let Some(_) = data {
-                    return Ok(());
-                }
-                return Err(AppError::BadRequest(
-                    "Record required but not found".to_string(),
-                ));
-            }
-            Err(err) => match err {
-                prisma_client_rust::Error::Execute(err) => return Err(get_error(&err)),
-                _ => return Err(AppError::Unknown),
-            },
+        let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
+
+        if let Some(tags) = &data.tags {
+            repo.create_post_with_tags(data, user_id, &slug::slugify(data.title.clone()), &tags)
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    println!("Error on post_repo/create_post {:?}", err.to_string());
+                    AppError::Unknown
+                })
+        } else {
+            repo.create_post(data, user_id, &slug::slugify(data.title.clone()))
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    println!("Error on post_repo/create_post {:?}", err.to_string());
+                    AppError::Unknown
+                })
         }
     }
 
-    pub async fn update_post(
-        prisma: std::sync::Arc<PrismaClient>,
-        data: &Post,
-    ) -> Result<Post, AppError> {
+    pub async fn delete_post(ctx: &Context, id: &i32) -> Result<(), AppError> {
+        let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
+        repo.delete_post(id).await.map(|_| ()).map_err(|err| {
+            println!("Error on post_repo/delete_post {:?}", err.to_string());
+            AppError::Unknown
+        })
+    }
+
+    pub async fn update_post(ctx: &Context, data: &Post, user_id: &i32) -> Result<(), AppError> {
         //	TODO: check if the user trying to update is the author
-        let repo = post_repository::PostRepository::new(prisma);
-        match repo.update_post(data).await {
-            Ok(data) => {
-                if let Some(data) = data {
-                    return Ok(Post::from(data));
-                }
-                return Err(AppError::BadRequest(
-                    "Record required but not found".to_string(),
-                ));
-            }
-            Err(err) => match err {
-                prisma_client_rust::Error::Execute(err) => return Err(get_error(&err)),
-                _ => return Err(AppError::Unknown),
-            },
-        }
+        let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
+        repo.update_post(data, user_id)
+            .await
+            .map(|_| ())
+            .map_err(|err| {
+                println!("Error on post_repo/update_post {:?}", err.to_string());
+                return AppError::Unknown;
+            })
     }
 
     pub async fn find_many(
-        prisma: std::sync::Arc<PrismaClient>,
+        ctx: &Context,
         query: &PostFilters,
         pagination: &Pageable,
-    ) -> Result<Vec<Post>, AppError> {
-        let repo = post_repository::PostRepository::new(prisma);
+    ) -> Result<(Vec<Post>, i64), AppError> {
+        let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
         repo.find_many(pagination, query)
             .await
-            .map(|vec| vec.into_iter().map(Post::from).collect())
+            .map(|rows| {
+                let parsed: Vec<Post> = rows.into_iter().map(Post::from).collect();
+                let total = parsed
+                    .last()
+                    .map(|last| last.totalrows.unwrap_or(0))
+                    .unwrap_or(0);
+                (parsed, total)
+            })
             .map_err(|err| {
-                println!("error on user find_many service: {:?}", err);
+                println!("error on user post_repo/find_many: {:?}", err);
                 AppError::Unknown
             })
     }
