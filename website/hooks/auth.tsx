@@ -1,14 +1,13 @@
 import { useStore } from "store";
 
 export const useAuth = () => {
-  const { isLoggedIn, isLoading, data } = useStore((state) => ({
+  const { isLoggedIn, isLoading } = useStore((state) => ({
     isLoggedIn: state.loggedIn,
-    data: state.data,
     isLoading: state.isLoading,
   }));
 
   return {
-    loggedIn: isLoggedIn && data,
+    isLoggedIn,
     isLoading,
   };
 };

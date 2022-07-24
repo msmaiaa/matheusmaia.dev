@@ -47,7 +47,7 @@ const loginSchema = z.object({
 });
 
 export const LoginForm = () => {
-  const { loggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   const { handleSubmit, register } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -59,12 +59,10 @@ export const LoginForm = () => {
   }));
 
   useEffect(() => {
-    if (!isLoading && loggedIn) {
-      if (loggedIn) {
-        router.push("/");
-      }
+    if (!isLoading && isLoggedIn) {
+      router.push("/");
     }
-  }, [loggedIn, isLoading]);
+  }, [isLoggedIn, isLoading]);
 
   const onSubmit = (data: LoginInput) => {
     login(data)

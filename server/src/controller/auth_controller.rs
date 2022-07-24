@@ -24,11 +24,6 @@ enum LoginResponse {
     Ok(Json<LoginResponsePayload>),
 }
 
-#[derive(Object)]
-struct GetCurrentUserResponsePayload {
-    username: String,
-}
-
 #[derive(ApiResponse)]
 enum GetCurrentUserResponse {
     #[oai(status = 200)]

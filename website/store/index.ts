@@ -20,8 +20,8 @@ export const useStore = create<UserState>((set) => ({
   setUser(data) {
     set(() => ({ data }));
   },
-  setLoggedIn(logged) {
-    set(() => ({ loggedIn: logged }));
+  setLoggedIn(loggedIn) {
+    set(() => ({ loggedIn }));
   },
   setIsLoading(isLoading) {
     set(() => ({ isLoading }));

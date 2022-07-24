@@ -10,8 +10,7 @@ import { useStore } from "store";
 
 const AuthHandler: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [getUser] = useGetCurrentUserMutation();
-  const { setUser, setLoggedIn, setIsLoading } = useStore((state) => ({
-    setUser: state.setUser,
+  const { setLoggedIn, setIsLoading } = useStore((state) => ({
     setLoggedIn: state.setLoggedIn,
     setIsLoading: state.setIsLoading,
   }));
@@ -19,8 +18,7 @@ const AuthHandler: React.FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     getUser()
       .unwrap()
-      .then((data) => {
-        setUser(data);
+      .then(() => {
         setLoggedIn(true);
       })
       .catch(() => localStorage.removeItem("token"));
