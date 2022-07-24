@@ -69,10 +69,28 @@ pub struct TagFilters {
 pub struct User {
     pub id: i32,
     pub username: String,
+    pub avatar_url: Option<String>,
     pub password: String,
     pub admin: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct SanitizedUser {
+    pub id: i32,
+    pub username: String,
+    pub avatar_url: Option<String>,
+}
+
+impl From<User> for SanitizedUser {
+    fn from(user: User) -> Self {
+        SanitizedUser {
+            id: user.id,
+            username: user.username,
+            avatar_url: user.avatar_url,
+        }
+    }
 }
 
 #[derive(Object, Clone, Deserialize, Serialize, sqlx::FromRow, Debug)]
@@ -87,6 +105,42 @@ pub struct Post {
     pub updated_at: chrono::NaiveDateTime,
     #[oai(skip)]
     pub totalrows: Option<i64>,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct PostWithAuthor {
+    pub id: i32,
+    pub title: String,
+    pub slug: String,
+    pub content: String,
+    pub published: bool,
+    pub author_id: i32,
+    pub author: SanitizedUser,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    #[oai(skip)]
+    pub totalrows: Option<i64>,
+}
+
+impl From<PgRow> for PostWithAuthor {
+    fn from(row: PgRow) -> Self {
+        PostWithAuthor {
+            id: row.get("id"),
+            title: row.get("title"),
+            slug: row.get("slug"),
+            content: row.get("content"),
+            published: row.get("published"),
+            author_id: row.get("author_id"),
+            author: SanitizedUser {
+                id: row.get("author_id"),
+                username: row.get("author_username"),
+                avatar_url: row.get("author_avatar_url"),
+            },
+            totalrows: row.get("totalrows"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        }
+    }
 }
 
 impl From<PgRow> for Post {

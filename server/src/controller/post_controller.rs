@@ -3,7 +3,7 @@ use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_types::{ErrorMessage, Pageable, Post, PostFilters, ResponseError},
+    common_types::{ErrorMessage, Pageable, Post, PostFilters, PostWithAuthor, ResponseError},
     config::Context,
     dto::CreatePostPayload,
     jwt::JWTAuthorization,
@@ -28,11 +28,22 @@ struct PostFindMany {
     pub data: Vec<Post>,
     pub total: i64,
 }
+#[derive(Serialize, Deserialize, Object)]
+struct PostFindManyWithAuthor {
+    pub data: Vec<PostWithAuthor>,
+    pub total: i64,
+}
 
 #[derive(ApiResponse)]
 enum GetPostsResponse {
     #[oai(status = 200)]
     Ok(Json<PostFindMany>),
+}
+
+#[derive(ApiResponse)]
+enum GetPostsPageResponse {
+    #[oai(status = 200)]
+    Ok(Json<PostFindManyWithAuthor>),
 }
 
 #[derive(ApiResponse)]
@@ -112,6 +123,22 @@ impl PostController {
         crate::service::PostService::find_many(&data, &name, &filters)
             .await
             .map(|(posts, total)| GetPostsResponse::Ok(Json(PostFindMany { data: posts, total })))
+            .map_err(ResponseError::from)
+    }
+
+    #[oai(path = "/blog_page", method = "get")]
+    async fn blog_page(
+        &self,
+        data: Data<&Context>,
+        req: &Request,
+    ) -> Result<GetPostsPageResponse, ResponseError> {
+        let name = req.params::<PostFilters>().unwrap_or_default();
+        let filters = req.params::<Pageable>().unwrap_or_default();
+        crate::service::PostService::find_many_with_author(&data, &name, &filters)
+            .await
+            .map(|(posts, total)| {
+                GetPostsPageResponse::Ok(Json(PostFindManyWithAuthor { data: posts, total }))
+            })
             .map_err(ResponseError::from)
     }
 }

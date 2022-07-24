@@ -123,4 +123,36 @@ impl PostRepository {
         let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(built_query);
         builder.build().fetch_all(&*self.db_pool).await
     }
+
+    pub async fn find_many_with_author(
+        &self,
+        pagination: &Pageable,
+        filters: &PostFilters,
+    ) -> Result<Vec<PgRow>, sqlx::Error> {
+        let mut query_string = r#"
+						SELECT 
+							p.id, 
+							p.content, 
+							p.title, 
+							p.slug, 
+							p.published, 
+							p.author_id, 
+							p.created_at,
+							p.updated_at,
+              u.username as author_username,
+              u.avatar_url as author_avatar_url
+						FROM post p
+						LEFT JOIN users u on u.id = p.id
+						"#
+        .to_string();
+
+        if let Some(title) = &filters.title {
+            query_string.push_str(&format!(" WHERE title ILIKE '%{}%'", *title));
+        }
+
+        let built_query =
+            build_paginated_query(&query_string, &None, &pagination.page, &pagination.take);
+        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(built_query);
+        builder.build().fetch_all(&*self.db_pool).await
+    }
 }

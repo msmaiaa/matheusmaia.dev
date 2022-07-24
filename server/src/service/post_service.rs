@@ -1,4 +1,4 @@
-use crate::common_types::{AppError, Pageable, Post, PostFilters};
+use crate::common_types::{AppError, Pageable, Post, PostFilters, PostWithAuthor};
 use crate::config::Context;
 
 pub struct PostService;
@@ -69,6 +69,29 @@ impl PostService {
             })
             .map_err(|err| {
                 println!("error on user post_repo/find_many: {:?}", err);
+                AppError::Unknown
+            })
+    }
+
+    pub async fn find_many_with_author(
+        ctx: &Context,
+        query: &PostFilters,
+        pagination: &Pageable,
+    ) -> Result<(Vec<PostWithAuthor>, i64), AppError> {
+        let repo = post_repository::PostRepository::new(ctx.db_pool.clone());
+        repo.find_many_with_author(pagination, query)
+            .await
+            .map(|rows| {
+                let parsed: Vec<PostWithAuthor> =
+                    rows.into_iter().map(PostWithAuthor::from).collect();
+                let total = parsed
+                    .last()
+                    .map(|last| last.totalrows.unwrap_or(0))
+                    .unwrap_or(0);
+                (parsed, total)
+            })
+            .map_err(|err| {
+                println!("error on user post_repo/find_many_with_author: {:?}", err);
                 AppError::Unknown
             })
     }
