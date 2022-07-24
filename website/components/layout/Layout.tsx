@@ -20,7 +20,7 @@ type Props = {
 export const Layout = ({ children }: Props) => (
   <$PageWrapper>
     <$PageLayout>
-      <main>{children}</main>
+      <main className="w-full">{children}</main>
     </$PageLayout>
   </$PageWrapper>
 );
