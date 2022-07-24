@@ -142,12 +142,12 @@ impl PostRepository {
               u.username as author_username,
               u.avatar_url as author_avatar_url
 						FROM post p
-						LEFT JOIN users u on u.id = p.id
+						LEFT JOIN users u on u.id = p.author_id
 						"#
         .to_string();
 
         if let Some(title) = &filters.title {
-            query_string.push_str(&format!(" WHERE title ILIKE '%{}%'", *title));
+            query_string.push_str(&format!(" WHERE p.title ILIKE '%{}%'", *title));
         }
 
         let built_query =
