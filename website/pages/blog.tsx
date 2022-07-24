@@ -1,9 +1,14 @@
-import { useGetBlogPostsQuery } from "api/post";
-import React, { useEffect } from "react";
+import { useGetBlogPostsMutation } from "api/post";
+import React, { useCallback, useEffect, useState } from "react";
 import tw from "twin.macro";
 import styled from "styled-components";
-import { BlogPost } from "types";
+import { BlogPost, SearchPostQuery } from "types";
 import { format } from "date-fns";
+import { $Input } from "components/ui/input";
+import { $Button } from "components/ui/button";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const $PostsArea = tw.div`
 	flex
@@ -57,16 +62,46 @@ const $InnerContainer = tw.div`
 	w-1/2
 `;
 
+const searchSchema = z.object({
+  title: z.string().optional(),
+});
+
 const Blog = () => {
-  const { data: posts } = useGetBlogPostsQuery();
+  const { register, handleSubmit } = useForm<SearchPostQuery>({
+    resolver: zodResolver(searchSchema),
+  });
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [getPosts] = useGetBlogPostsMutation();
+
+  const updatePosts = useCallback((args: SearchPostQuery) => {
+    getPosts(args)
+      .unwrap()
+      .then((result) => {
+        setPosts(result.data);
+      });
+  }, []);
+
   useEffect(() => {
-    console.log(posts);
-  }, [posts]);
+    updatePosts({});
+  }, []);
+
+  const onSubmit = (data: SearchPostQuery) => {
+    console.log(data);
+    updatePosts(data);
+  };
   return (
     <div className="flex justify-center">
       <$InnerContainer>
+        <form className="flex w-full mb-4" onSubmit={handleSubmit(onSubmit)}>
+          <$Input
+            placeholder="Search by title"
+            className="pl-2 h-8"
+            {...register("title")}
+          />
+          <$Button className="ml-4 w-24">Search</$Button>
+        </form>
         <$PostsArea>
-          {posts?.data.map((post) => (
+          {posts.map((post) => (
             <Post post={post} />
           ))}
         </$PostsArea>

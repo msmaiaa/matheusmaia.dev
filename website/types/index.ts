@@ -10,7 +10,7 @@ export type LoginOutput = {
 
 export type PaginatedResponse<T> = {
   data: T;
-  tota: number;
+  total: number;
 };
 
 export type BlogPost = {
@@ -27,4 +27,8 @@ export type BlogPost = {
     username: string;
     avatar_url: string;
   };
+};
+
+export type SearchPostQuery = {
+  title?: string;
 };
