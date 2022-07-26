@@ -5,7 +5,7 @@ use crate::{
 };
 use sqlx::{
     postgres::{PgQueryResult, PgRow},
-    Postgres, QueryBuilder, Row,
+    Postgres, QueryBuilder,
 };
 use std::sync::Arc;
 

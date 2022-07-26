@@ -1,6 +1,6 @@
 use crate::repository::TagRepository;
 use crate::{
-    common_types::{AppError, Pageable, Tag, TagFilters},
+    common_types::{AppError, Tag, TagFilters},
     config::Context,
 };
 
