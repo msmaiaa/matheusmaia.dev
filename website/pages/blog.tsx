@@ -9,6 +9,7 @@ import { $Button } from "components/ui/button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 
 const $PostsArea = tw.div`
 	flex
@@ -86,20 +87,24 @@ const Blog = () => {
   }, []);
 
   const onSubmit = (data: SearchPostQuery) => {
-    console.log(data);
     updatePosts(data);
   };
   return (
     <div className="flex justify-center">
       <$InnerContainer>
-        <form className="flex w-full mb-4" onSubmit={handleSubmit(onSubmit)}>
-          <$Input
-            placeholder="Search by title"
-            className="pl-2 h-8"
-            {...register("title")}
-          />
-          <$Button className="ml-4 w-24">Search</$Button>
-        </form>
+        <div className="flex w-full mb-4">
+          <form className="flex-grow" onSubmit={handleSubmit(onSubmit)}>
+            <$Input
+              placeholder="Search by title"
+              className="pl-2 h-8"
+              {...register("title")}
+            />
+            <$Button className="ml-4 w-24">Search</$Button>
+          </form>
+          <Link href="/create-post">
+            <$Button className="w-32">Create post</$Button>
+          </Link>
+        </div>
         <$PostsArea>
           {posts.map((post) => (
             <Post post={post} />

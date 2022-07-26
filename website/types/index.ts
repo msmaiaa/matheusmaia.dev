@@ -32,3 +32,14 @@ export type BlogPost = {
 export type SearchPostQuery = {
   title?: string;
 };
+
+export type Tag = {
+  id: number;
+  name: string;
+};
+
+export type CreatePostInput = {
+  title: string;
+  content: string;
+  tags?: number[];
+};

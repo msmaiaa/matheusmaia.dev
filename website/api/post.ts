@@ -1,5 +1,10 @@
 import { baseApi } from "api";
-import { BlogPost, PaginatedResponse, SearchPostQuery } from "types";
+import {
+  BlogPost,
+  CreatePostInput,
+  PaginatedResponse,
+  SearchPostQuery,
+} from "types";
 
 const PostService = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -14,7 +19,16 @@ const PostService = baseApi.injectEndpoints({
         };
       },
     }),
+    createPost: builder.mutation<void, CreatePostInput>({
+      query: (body) => {
+        return {
+          url: "/post",
+          method: "POST",
+          body,
+        };
+      },
+    }),
   }),
 });
 
-export const { useGetBlogPostsMutation } = PostService;
+export const { useGetBlogPostsMutation, useCreatePostMutation } = PostService;
